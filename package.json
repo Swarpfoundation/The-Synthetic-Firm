@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "postinstall": "echo 'Synthetic Firm browser tooling dependencies are installed. Run: synthetic-firm --help'",
+    "build": "npm run frontend:install && npm run frontend:build",
     "frontend:install": "npm install --prefix apps/control-room",
     "frontend:dev": "npm run dev --prefix apps/control-room",
     "frontend:build": "npm run build --prefix apps/control-room",
