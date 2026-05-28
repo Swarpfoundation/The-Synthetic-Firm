@@ -1,0 +1,102 @@
+version: 1
+defaults:
+  provider: kimi-coding
+  model: kimi-for-coding
+  api_mode: chat_completions
+  api_key_alias: TSF_KIMI_API_KEY
+  api_key_env: KIMI_API_KEY
+  toolsets:
+    - tsf-core
+  budget:
+    daily_usd: 5.0
+    monthly_usd: 100.0
+    max_turns: 45
+  approval_channel: telegram
+
+agents:
+  atlas:
+    display_name: Atlas / CEO Agent
+    description: Coordinates internal work, assigns tasks, and keeps strategic context.
+    model_policy:
+      provider: kimi-coding
+      model: kimi-for-coding
+      api_key_alias: TSF_KIMI_API_KEY
+      api_key_env: KIMI_API_KEY
+    permissions:
+      - read_repo
+      - write_code
+      - run_tests
+      - manage_internal_tasks
+    budget:
+      daily_usd: 10.0
+      monthly_usd: 250.0
+      max_turns: 60
+
+  scout:
+    display_name: Scout / Research and Opportunity Agent
+    description: Performs market, technical, and opportunity research without external outreach.
+    model_policy:
+      provider: kimi-coding
+      model: kimi-for-coding
+      api_key_alias: TSF_KIMI_API_KEY
+      api_key_env: KIMI_API_KEY
+    permissions:
+      - read_repo
+      - web_research
+      - write_notes
+    budget:
+      daily_usd: 7.5
+      monthly_usd: 150.0
+      max_turns: 50
+
+  forge:
+    display_name: Forge / Product Agent
+    description: Implements product and platform changes behind approval gates.
+    model_policy:
+      provider: kimi-coding
+      model: kimi-for-coding
+      api_key_alias: TSF_KIMI_API_KEY
+      api_key_env: KIMI_API_KEY
+    permissions:
+      - read_repo
+      - write_code
+      - run_tests
+    budget:
+      daily_usd: 10.0
+      monthly_usd: 250.0
+      max_turns: 70
+
+  pulse:
+    display_name: Pulse / Growth and Sales Agent
+    description: Drafts growth strategy and sales materials without sending external communications.
+    model_policy:
+      provider: kimi-coding
+      model: kimi-for-coding
+      api_key_alias: TSF_KIMI_API_KEY
+      api_key_env: KIMI_API_KEY
+    permissions:
+      - read_repo
+      - write_notes
+      - draft_growth_materials
+    budget:
+      daily_usd: 5.0
+      monthly_usd: 100.0
+      max_turns: 40
+
+  sentinel:
+    display_name: Sentinel / QA and Compliance Agent
+    description: Reviews quality, tests, security, compliance, and policy risk.
+    model_policy:
+      provider: kimi-coding
+      model: kimi-for-coding
+      api_key_alias: TSF_KIMI_API_KEY
+      api_key_env: KIMI_API_KEY
+    permissions:
+      - read_repo
+      - run_tests
+      - review_security
+      - review_compliance
+    budget:
+      daily_usd: 7.5
+      monthly_usd: 150.0
+      max_turns: 50

@@ -1,0 +1,39 @@
+version: 1
+approval_system:
+  future_channel: telegram
+  phase_2_behavior: model_and_simulation_only
+  notes:
+    - Risky actions must eventually require Telegram approval.
+    - Phase 1 only validates static policy and documents approval intent.
+
+protected_files:
+  - agents/policy.yaml
+  - agents/profiles.yaml
+  - .env
+  - .env.*
+  - "**/.env"
+  - "**/.env.*"
+
+forbidden_permissions:
+  - self_permission_write
+  - approval_rules_write
+  - raw_env_read
+  - external_communications
+  - production_deploy
+  - merge_main
+  - audit_log_disable
+  - payment_tools
+  - social_posting
+  - email_sending
+  - github_write_automation
+
+permission_descriptions:
+  read_repo: Read repository files except secret-bearing files.
+  write_code: Modify project code through normal reviewable file edits.
+  run_tests: Run local test and health-check commands.
+  manage_internal_tasks: Create internal plans and task breakdowns only.
+  web_research: Use research tools where configured by TSF policy.
+  write_notes: Create internal notes and documentation.
+  draft_growth_materials: Draft materials without sending or posting them.
+  review_security: Review code and configuration for security risk.
+  review_compliance: Review policy, license, and process compliance.

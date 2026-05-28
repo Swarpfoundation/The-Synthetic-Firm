@@ -1,0 +1,31 @@
+{
+  "name": "synthetic-firm",
+  "version": "1.0.0",
+  "description": "The Synthetic Firm autonomous AI agency OS",
+  "private": true,
+  "scripts": {
+    "postinstall": "echo 'Synthetic Firm browser tooling dependencies are installed. Run: synthetic-firm --help'",
+    "frontend:install": "npm install --prefix apps/control-room",
+    "frontend:dev": "npm run dev --prefix apps/control-room",
+    "frontend:build": "npm run build --prefix apps/control-room",
+    "frontend:typecheck": "npm run typecheck --prefix apps/control-room"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Swarpfoundation/The-Synthetic-Firm.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Swarpfoundation/The-Synthetic-Firm/issues"
+  },
+  "homepage": "https://github.com/Swarpfoundation/The-Synthetic-Firm#readme",
+  "dependencies": {
+    "agent-browser": "^0.26.0"
+  },
+  "overrides": {
+    "lodash": "4.18.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

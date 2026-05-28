@@ -1,0 +1,68 @@
+# The Synthetic Firm Autonomous Scheduler
+
+The autonomous scheduler runs bounded checkpoints for the private TSF runtime.
+It is not a public CLI workflow. Product operation is:
+
+- autonomous scheduler and runtime
+- Telegram as Atlas inbox and Human Task Inbox
+- public website as a read-only progress window
+
+## Workday
+
+Default schedule:
+
+- timezone: `Europe/Paris`
+- workdays: Monday-Friday
+- hours: `10:00-16:00`
+
+Checkpoint cadence:
+
+- `10:00`: Atlas starts the workday
+- `11:00`: bounded workday cycle
+- `12:30`: bounded workday cycle
+- `14:00`: bounded workday cycle
+- `15:30`: Atlas public/private manager reports
+- `16:00`: close workday
+
+## Runner Modes
+
+`checkpoint_once` evaluates exactly one checkpoint, runs it if due, and exits.
+This is the recommended shape for cron or scheduled worker execution.
+
+`local_loop` is internal/dev only. It has hard maximum runtime and checkpoint
+limits and handles SIGINT/SIGTERM safely. It must not be used as an uncontrolled
+forever loop.
+
+## Safety Checks
+
+Before work runs, the scheduler checks:
+
+- runtime is active
+- audit log verifies
+- budget is configured and within limit
+- workday window permits the checkpoint
+- scheduler lock is available
+- daily checkpoint limits are not exceeded
+
+Paused runtime blocks agent cycles. Killed runtime blocks scheduler work except
+status inspection. Provider unavailability creates blocked tasks or HumanTasks
+instead of fake progress.
+
+## Locks
+
+Scheduler locks are persisted in SQLite with an expiry time. Overlapping runs are
+blocked. Stale locks expire and all lock acquire/release/expire events are
+audited.
+
+## Internal Smoke Commands
+
+These commands are internal developer/test utilities, not founder product UX:
+
+```bash
+synthetic-firm scheduler-dry-run-plan
+synthetic-firm scheduler-checkpoint-once
+synthetic-firm scheduler-status
+synthetic-firm scheduler-lock-status
+synthetic-firm scheduler-loop --max-runtime-seconds 300 --max-checkpoints 3
+```
+

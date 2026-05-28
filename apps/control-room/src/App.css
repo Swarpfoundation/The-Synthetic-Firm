@@ -1,0 +1,84 @@
+/* ============================================ */
+/* Synthetic Firm Public Progress Window — 3D Game Styles  */
+/* ============================================ */
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(6, 182, 212, 0.25);
+  color: #e2e8f0;
+}
+
+/* Prevent selection on interactive elements */
+button,
+[role="button"] {
+  user-select: none;
+  cursor: pointer;
+}
+
+/* Smooth scroll for panels */
+.overflow-y-auto {
+  scroll-behavior: smooth;
+}
+
+/* Canvas container */
+canvas {
+  display: block;
+  outline: none;
+}
+
+/* HUD scan line effect overlay */
+.hud-scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(6, 182, 212, 0.015) 2px,
+    rgba(6, 182, 212, 0.015) 4px
+  );
+  z-index: 100;
+}
+
+/* Glass card scan line decoration */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(6, 182, 212, 0.02) 2px,
+    rgba(6, 182, 212, 0.02) 4px
+  );
+  border-radius: inherit;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

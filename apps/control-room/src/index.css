@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 30% 3%;
+    --foreground: 210 20% 98%;
+    --card: 220 25% 6%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 25% 6%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 187 94% 43%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 10% 50%;
+    --accent: 263 70% 58%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 187 94% 43%;
+    --radius: 0.5rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: #05080F;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  }
+}
