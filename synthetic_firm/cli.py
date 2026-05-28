@@ -84,6 +84,7 @@ from synthetic_firm.provider_runtime import (
     provider_runtime_status,
     result_to_dict,
 )
+from synthetic_firm.public_progress_smoke import run_public_progress_e2e_smoke
 from synthetic_firm.proposals import (
     create_self_improvement_proposal,
     create_worker_proposal,
@@ -226,6 +227,7 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "render-deploy-staging",
         "deployment-human-tasks",
         "deployment-notifications",
+        "public-progress-e2e-smoke",
     }
 )
 
@@ -505,6 +507,9 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     render_staging.add_argument("--dry-run", action="store_true", default=True)
     sub.add_parser("deployment-human-tasks", help="Internal/dev: list deployment setup HumanTasks")
     sub.add_parser("deployment-notifications", help="Internal/dev: list deployment-related notifications")
+    public_smoke = sub.add_parser("public-progress-e2e-smoke", help="Internal/dev: read-only public frontend/API smoke")
+    public_smoke.add_argument("--frontend-url", required=True)
+    public_smoke.add_argument("--api-url", required=True)
     return parser
 
 
@@ -1297,6 +1302,10 @@ def _main_orchestrator(argv: list[str]) -> int:
         _print_json({"notifications": notifications})
         store.close()
         return 0
+    if args.command == "public-progress-e2e-smoke":
+        result = run_public_progress_e2e_smoke(frontend_url=args.frontend_url, api_url=args.api_url)
+        _print_json(result.to_dict())
+        return 0 if result.passed else 1
     raise AssertionError(f"Unhandled command: {args.command}")
 
 
