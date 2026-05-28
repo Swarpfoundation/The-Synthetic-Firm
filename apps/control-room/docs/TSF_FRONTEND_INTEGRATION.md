@@ -209,3 +209,5 @@ The frontend must not:
 Add an authenticated founder-only command adapter. Keep public frontend actions
 disabled; any future founder action must route through signed, audited,
 approval-aware runtime boundaries.
+
+<!-- Git integration redeploy marker: 2026-05-28T22:27:22Z -->
