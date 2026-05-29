@@ -35,6 +35,28 @@ services:
           name: synthetic-firm-postgres
           property: connectionString
 
+  - type: cron
+    name: the-synthetic-firm-telegram-founder-inbox
+    env: python
+    schedule: "* * * * *"
+    buildCommand: pip install -e ".[web,postgres]"
+    startCommand: synthetic-firm telegram-founder-sync-once --live --retry-dry-run-sent
+    envVars:
+      - key: TSF_STORE_BACKEND
+        value: postgres
+      - key: TSF_TELEGRAM_ENABLED
+        value: "true"
+      - key: TSF_TELEGRAM_MODE
+        value: bounded_polling
+      - key: TSF_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TSF_TELEGRAM_ALLOWED_CHAT_IDS
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: synthetic-firm-postgres
+          property: connectionString
+
 databases:
   - name: synthetic-firm-postgres
     plan: starter

@@ -15,6 +15,7 @@ from synthetic_firm.telegram_live import (
     load_telegram_config,
     poll_once,
     send_pending_notifications,
+    telegram_founder_sync_once,
     telegram_founder_smoke,
     telegram_status,
     validate_chat,
@@ -214,6 +215,34 @@ def test_send_pending_notifications_dry_run_marks_without_network(monkeypatch, t
 
     assert result["sent"] == 1
     assert "Safe notification" in store.connection.execute("SELECT body FROM notification_queue").fetchone()["body"]
+    store.close()
+
+
+def test_founder_sync_once_polls_and_sends_notifications(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    sent: list[tuple[str, str]] = []
+    store.connection.execute(
+        "INSERT INTO notification_queue VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ("note_test", "human_task", None, "Safe notification", "queued", 0, "2026-01-01T00:00:00+00:00", None),
+    )
+    store.connection.commit()
+    config = TelegramConfig(enabled=True, bot_token="token", allowed_chat_ids=frozenset({"123"}), mode="bounded_polling")
+
+    monkeypatch.setattr(
+        "synthetic_firm.telegram_live._fetch_telegram_update",
+        lambda store, config: TelegramUpdate(chat_id="123", text="What do they need from me?"),
+    )
+    monkeypatch.setattr(
+        "synthetic_firm.telegram_live._send_telegram_message",
+        lambda config, *, chat_id, body: sent.append((chat_id, body)),
+    )
+
+    result = telegram_founder_sync_once(store, config=config, live=True)
+
+    assert result["pollError"] is None
+    assert result["notifications"]["sent"] == 1
+    assert sent[-1] == ("123", "Safe notification")
     store.close()
 
 

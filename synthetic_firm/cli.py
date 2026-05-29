@@ -151,6 +151,7 @@ from synthetic_firm.telegram_live import (
     load_telegram_config,
     poll_once,
     send_pending_notifications,
+    telegram_founder_sync_once,
     telegram_founder_smoke,
     telegram_status,
 )
@@ -216,6 +217,7 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "telegram-founder-status",
         "telegram-dry-run-command",
         "telegram-poll-once",
+        "telegram-founder-sync-once",
         "telegram-send-pending-notifications",
         "telegram-founder-smoke",
         "list-approvals",
@@ -473,6 +475,9 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     telegram_dry.add_argument("text")
     telegram_dry.add_argument("--chat-id", default="dry-run-founder")
     sub.add_parser("telegram-poll-once", help="Run one safe Telegram polling cycle")
+    telegram_sync = sub.add_parser("telegram-founder-sync-once", help="Run one bounded Telegram inbox sync")
+    telegram_sync.add_argument("--live", action="store_true")
+    telegram_sync.add_argument("--retry-dry-run-sent", action="store_true")
     send_pending = sub.add_parser(
         "telegram-send-pending-notifications",
         help="Internal/dev: send or dry-run queued Telegram notifications",
@@ -1107,6 +1112,17 @@ def _main_orchestrator(argv: list[str]) -> int:
     if args.command == "telegram-poll-once":
         store = Store()
         print(poll_once(store))
+        store.close()
+        return 0
+    if args.command == "telegram-founder-sync-once":
+        store = Store()
+        _print_json(
+            telegram_founder_sync_once(
+                store,
+                live=args.live,
+                retry_dry_run_sent=args.retry_dry_run_sent,
+            )
+        )
         store.close()
         return 0
     if args.command == "telegram-send-pending-notifications":

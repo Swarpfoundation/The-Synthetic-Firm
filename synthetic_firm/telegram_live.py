@@ -410,6 +410,35 @@ def send_pending_notifications(
     }
 
 
+def telegram_founder_sync_once(
+    store: Store,
+    *,
+    config: TelegramConfig | None = None,
+    live: bool = True,
+    retry_dry_run_sent: bool = False,
+) -> dict[str, object]:
+    cfg = config or load_telegram_config()
+    poll_result: str | None = None
+    poll_error: str | None = None
+    try:
+        poll_result = poll_once(store, config=cfg)
+    except TelegramLiveError as exc:
+        poll_error = str(exc)
+    notification_result = send_pending_notifications(
+        store,
+        config=cfg,
+        live=live,
+        retry_dry_run_sent=retry_dry_run_sent,
+    )
+    return {
+        "live": live,
+        "pollResult": poll_result,
+        "pollError": poll_error,
+        "notifications": notification_result,
+        "summary": "Telegram founder sync completed.",
+    }
+
+
 def telegram_founder_smoke(*, config: TelegramConfig | None = None, live: bool = False) -> dict[str, object]:
     cfg = config or load_telegram_config()
     status = telegram_status(cfg)

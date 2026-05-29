@@ -61,11 +61,16 @@ present. It never prints chat IDs or token values.
 Recommended Render cron command:
 
 ```bash
-synthetic-firm telegram-poll-once && synthetic-firm telegram-send-pending-notifications --live
+synthetic-firm telegram-founder-sync-once --live --retry-dry-run-sent
 ```
 
 Run it every 1-5 minutes. The poller processes at most one update per run and
 persists the Telegram update offset in shared Postgres state.
+
+The starter `render.yaml` includes a Telegram Founder Inbox cron service. Add
+`TSF_TELEGRAM_BOT_TOKEN` and `TSF_TELEGRAM_ALLOWED_CHAT_IDS` to that Render
+cron service manually; the blueprint names those variables with `sync: false`
+and does not store secret values in the repository.
 
 ## Safety Boundaries
 
