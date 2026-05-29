@@ -22,6 +22,7 @@ DEPLOYMENT_STATES = frozenset(
         "validation_failed",
         "ready_for_preview",
         "preview_deployed",
+        "staging_deployed",
         "production_candidate",
         "production_blocked",
         "production_ready",

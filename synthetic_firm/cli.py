@@ -618,8 +618,10 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     vercel_health = sub.add_parser("vercel-health-check", help="Internal/dev: check a Vercel preview URL")
     vercel_health.add_argument("url")
     sub.add_parser("render-readiness", help="Internal/dev: validate Render deployment readiness")
-    render_staging = sub.add_parser("render-deploy-staging", help="Internal/dev: dry-run Render staging deployment")
-    render_staging.add_argument("--dry-run", action="store_true", default=True)
+    render_staging = sub.add_parser("render-deploy-staging", help="Internal/dev: dry-run or execute Render staging deployment")
+    render_staging_mode = render_staging.add_mutually_exclusive_group()
+    render_staging_mode.add_argument("--dry-run", action="store_true", default=True)
+    render_staging_mode.add_argument("--live", action="store_true")
     sub.add_parser("deployment-human-tasks", help="Internal/dev: list deployment setup HumanTasks")
     sub.add_parser("deployment-notifications", help="Internal/dev: list deployment-related notifications")
     public_smoke = sub.add_parser("public-progress-e2e-smoke", help="Internal/dev: read-only public frontend/API smoke")
@@ -1528,7 +1530,7 @@ def _main_orchestrator(argv: list[str]) -> int:
         return 0
     if args.command == "render-deploy-staging":
         store = Store()
-        result = deploy_render_service(store, target="render_backend_api", environment="staging", dry_run=args.dry_run)
+        result = deploy_render_service(store, target="render_backend_api", environment="staging", dry_run=not args.live)
         _print_json(result)
         store.close()
         return 0

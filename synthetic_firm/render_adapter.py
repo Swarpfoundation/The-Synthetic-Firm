@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping
@@ -36,6 +39,7 @@ class RenderStatus:
     api_key_present: bool
     api_service_id_present: bool
     scheduler_service_id_present: bool
+    deploy_method: str
     blueprint_path: str
     safe_summary: str
 
@@ -50,6 +54,7 @@ def render_status(env: Mapping[str, str] | None = None) -> dict[str, object]:
         api_key_present=credential.credential_present,
         api_service_id_present=bool(_render_service_id(env_map, "render_backend_api")),
         scheduler_service_id_present=bool(_render_service_id(env_map, "render_scheduler_worker")),
+        deploy_method=_render_deploy_method(env_map),
         blueprint_path=env_map.get("TSF_RENDER_BLUEPRINT_PATH", "render.yaml"),
         safe_summary=credential.safe_summary,
     )
@@ -68,11 +73,14 @@ def render_credential_status(
     enabled = _bool(env_map.get("TSF_RENDER_ENABLED"), default=False)
     cli_path = shutil.which("render")
     api_key = _render_api_key(env_map)
+    deploy_method = _render_deploy_method(env_map)
     blueprint_path = Path(env_map.get("TSF_RENDER_BLUEPRINT_PATH", "render.yaml"))
     service_id = _render_service_id(env_map, target)
     missing: list[str] = []
-    if not cli_path:
+    if deploy_method == "cli" and not cli_path:
         missing.append("Install Render CLI in the TSF runtime environment.")
+    if deploy_method not in {"api", "cli"}:
+        missing.append("Set Render deploy method to api or cli.")
     if not api_key:
         missing.extend(
             (
@@ -82,7 +90,7 @@ def render_credential_status(
         )
     if target == "render_backend_api" and not env_map.get("TSF_RENDER_API_SERVICE_ID", "").strip():
         missing.append("Provide the Render backend API service ID.")
-    if target in {"render_backend_api", "render_scheduler_worker"} and not (
+    if target == "render_scheduler_worker" and not (
         env_map.get("TSF_RENDER_SCHEDULER_SERVICE_ID", "").strip()
         or env_map.get("TSF_RENDER_WORKER_SERVICE_ID", "").strip()
     ):
@@ -220,15 +228,42 @@ def deploy_render_service(
             "policy": decision.__dict__,
             "sentinel": sentinel.__dict__,
         }
-    runner = runner or _run
     service_id = _render_service_id(env_map, target)
-    completed = runner(["render", "deploys", "create", service_id, "--wait", "--confirm"], None, _safe_env(env_map))
+    if _render_deploy_method(env_map) == "cli":
+        runner = runner or _run
+        completed = runner(["render", "deploys", "create", service_id, "--wait", "--confirm"], None, _safe_env(env_map))
+        executed = completed.returncode == 0
+        render_deploy_id = None
+    else:
+        deploy_payload = _post_render_deploy(env_map, service_id)
+        executed = True
+        render_deploy_id = _render_deploy_id(deploy_payload)
     live_plan = create_render_deployment_plan(target=target, environment=environment, env=env_map)
-    state = "production_deployed" if completed.returncode == 0 and environment == "production" else "preview_deployed"
-    if completed.returncode != 0:
+    state = "production_deployed" if executed and environment == "production" else _deployed_state(environment)
+    if not executed:
         state = "failed"
     record = save_deployment_record(store, plan=live_plan, checks=checks, state=state)
-    return {"dry_run": False, "executed": completed.returncode == 0, "deployment": record.deployment_id}
+    store.append_audit(
+        actor_type="orchestrator",
+        actor_id="render_adapter",
+        action="deployment_render_staging_triggered",
+        target_type="deployment_provider",
+        target_id="render",
+        risk_level="medium",
+        summary="Render staging deploy was triggered through the configured deploy adapter.",
+        metadata={
+            "method": _render_deploy_method(env_map),
+            "target": target,
+            "render_deploy_id_present": bool(render_deploy_id),
+        },
+    )
+    return {
+        "dry_run": False,
+        "executed": executed,
+        "deployment": record.deployment_id,
+        "render_deploy_id_present": bool(render_deploy_id),
+        "summary": "Render staging deploy triggered.",
+    }
 
 
 def validate_render_command(command: str) -> bool:
@@ -272,7 +307,7 @@ def _command_plan(target: str, environment: str) -> tuple[str, ...]:
         return ("render blueprints validate render.yaml",)
     if environment == "production":
         return ("render deploys create SERVICE_ID --wait --confirm",)
-    return ("render blueprints validate render.yaml", "render deploys list SERVICE_ID")
+    return ("POST https://api.render.com/v1/services/SERVICE_ID/deploys",)
 
 
 def _create_render_human_task(store: Store, reason: str, *, target: str) -> None:
@@ -344,6 +379,10 @@ def _safe_env(env: Mapping[str, str]) -> dict[str, str]:
     return safe
 
 
+def _render_deploy_method(env: Mapping[str, str]) -> str:
+    return (env.get("TSF_RENDER_DEPLOY_METHOD") or "api").strip().lower()
+
+
 def _render_api_key(env: Mapping[str, str]) -> str:
     return (env.get("TSF_RENDER_API_KEY") or env.get("RENDER_API_KEY") or "").strip()
 
@@ -369,6 +408,8 @@ def _render_version_redacted() -> str | None:
 def _render_live_gate(env: Mapping[str, str], status: DeploymentCredentialStatus, *, environment: str) -> tuple[bool, str]:
     if environment == "production":
         return False, "Render production deployment is blocked in this phase."
+    if _render_deploy_method(env) not in {"api", "cli"}:
+        return False, "Render deploy method must be api or cli."
     if not _bool(env.get("TSF_RENDER_ENABLED"), default=False):
         return False, "Render live deploy is disabled."
     if not _bool(env.get("TSF_RENDER_DEPLOY_ENABLED"), default=False):
@@ -376,6 +417,48 @@ def _render_live_gate(env: Mapping[str, str], status: DeploymentCredentialStatus
     if status.human_task_required:
         return False, "Render deployment setup is incomplete."
     return True, "Render staging live gate passed."
+
+
+def _post_render_deploy(env: Mapping[str, str], service_id: str) -> dict[str, object]:
+    body: dict[str, object] = {"clearCache": env.get("TSF_RENDER_CLEAR_CACHE", "do_not_clear")}
+    commit_id = env.get("TSF_RENDER_DEPLOY_COMMIT_ID", "").strip()
+    if commit_id:
+        body["commitId"] = commit_id
+    request = urllib.request.Request(
+        f"https://api.render.com/v1/services/{service_id}/deploys",
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {_render_api_key(env)}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            payload = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise RuntimeError(redact_auth_text(f"Render deploy API failed with HTTP {exc.code}: {detail}")) from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(redact_auth_text(f"Render deploy API failed: {exc.reason}")) from exc
+    return json.loads(payload) if payload else {}
+
+
+def _render_deploy_id(payload: Mapping[str, object]) -> str | None:
+    value = payload.get("id")
+    if isinstance(value, str):
+        return value
+    deploy = payload.get("deploy")
+    if isinstance(deploy, Mapping):
+        nested = deploy.get("id")
+        if isinstance(nested, str):
+            return nested
+    return None
+
+
+def _deployed_state(environment: str) -> str:
+    return "staging_deployed" if environment == "staging" else "preview_deployed"
 
 
 def _requirement_title(requirement: str, *, provider: str) -> str:

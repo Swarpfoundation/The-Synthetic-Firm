@@ -7,10 +7,12 @@ from synthetic_firm.cli import main
 from synthetic_firm.control_room_export import build_control_room_snapshot
 from synthetic_firm.cost_ledger import add_cost_item
 from synthetic_firm.deployment import credential_status_to_dict
+from synthetic_firm import render_adapter
 from synthetic_firm.render_adapter import (
     deploy_render_service,
     render_credential_status,
     render_readiness,
+    render_status,
     validate_render_command,
 )
 from synthetic_firm.store import Store
@@ -167,6 +169,48 @@ def test_render_deploy_disabled_and_production_blocked(monkeypatch, tmp_path):
     assert staging["executed"] is False
     assert production["executed"] is False
     assert "render-secret-key-value" not in json.dumps(staging) + json.dumps(production) + _dump_sqlite(store)
+    store.close()
+
+
+def test_render_staging_live_uses_api_without_cli(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    env = {
+        "TSF_RENDER_ENABLED": "true",
+        "TSF_RENDER_DEPLOY_ENABLED": "true",
+        "TSF_RENDER_DEPLOY_METHOD": "api",
+        "TSF_RENDER_API_KEY": "render-secret-key-value",
+        "TSF_RENDER_API_SERVICE_ID": "srv-private-123",
+        "TSF_DEPLOY_DRY_RUN": "false",
+    }
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(render_adapter.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(render_adapter, "_post_render_deploy", lambda _env, _service_id: {"id": "dep-private-123"})
+    store = Store()
+    add_cost_item(
+        store,
+        category="render",
+        provider="render",
+        service_name="Render API service",
+        description="Render backend hosting.",
+        amount_eur=7,
+        recurrence="monthly",
+        confidence="estimated",
+        public_summary="Backend hosting cost is tracked.",
+    )
+
+    status = render_status(env=env)
+    result = deploy_render_service(store, target="render_backend_api", environment="staging", dry_run=False, env=env)
+    dumped = json.dumps(result) + _dump_sqlite(store)
+
+    assert status["deploy_method"] == "api"
+    assert status["cli_available"] is False
+    assert result["executed"] is True
+    assert result["render_deploy_id_present"] is True
+    assert "render-secret-key-value" not in dumped
+    assert "srv-private-123" not in dumped
+    assert "dep-private-123" not in dumped
+    assert store.verify_audit()[0] is True
     store.close()
 
 

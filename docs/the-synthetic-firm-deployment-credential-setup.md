@@ -31,10 +31,13 @@ Backend readiness uses:
 
 - `TSF_RENDER_ENABLED=false`
 - `TSF_RENDER_DEPLOY_ENABLED=false`
+- `TSF_RENDER_DEPLOY_METHOD=api`
 - `TSF_RENDER_API_KEY` or `RENDER_API_KEY`
 - `TSF_RENDER_API_SERVICE_ID`
 - `TSF_RENDER_SCHEDULER_SERVICE_ID`
 - `TSF_RENDER_BLUEPRINT_PATH=render.yaml`
+- `TSF_RENDER_CLEAR_CACHE=do_not_clear`
+- `TSF_RENDER_DEPLOY_COMMIT_ID` optional
 
 Render service identifiers are founder/private operational details and are not
 exported to the public Progress Window.
@@ -50,7 +53,7 @@ such as:
 - link the frontend Vercel project
 - confirm preview deployment is allowed
 - confirm production remains blocked
-- install Render CLI
+- install Render CLI only if using `TSF_RENDER_DEPLOY_METHOD=cli`
 - create Render API access in the Render dashboard
 - configure Render API access through environment variables
 - provide backend API and scheduler service identifiers

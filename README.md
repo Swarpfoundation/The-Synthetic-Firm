@@ -142,6 +142,10 @@ remains readiness/staging-oriented in this phase.
 
 The Vercel CLI is installed as project-local tooling for `apps/control-room`.
 TSF uses the local binary before any global executable.
+Render staging deploys use the Render API by default and require explicit
+`TSF_RENDER_ENABLED=true`, `TSF_RENDER_DEPLOY_ENABLED=true`,
+`TSF_RENDER_DEPLOY_METHOD=api`, `TSF_RENDER_API_KEY`, and
+`TSF_RENDER_API_SERVICE_ID`.
 
 ```bash
 synthetic-firm deploy-status

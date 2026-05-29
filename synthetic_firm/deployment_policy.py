@@ -162,7 +162,7 @@ def _deployment_count_today(store: Store) -> int:
         """
         SELECT COUNT(*) AS count FROM deployment_records
         WHERE date(created_at) = date('now')
-          AND state IN ('preview_deployed', 'production_deployed', 'ready_for_preview', 'production_ready')
+          AND state IN ('preview_deployed', 'staging_deployed', 'production_deployed', 'ready_for_preview', 'production_ready')
         """
     ).fetchone()
     return int(row["count"])
