@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from synthetic_firm.agent_registry import AgentProfile, AgentRegistry
+from synthetic_firm.autonomous_ops import autonomous_ops_public_summary
 from synthetic_firm.code_change import code_change_public_summary
 from synthetic_firm.cost_ledger import budget_private_report, budget_public_summary
 from synthetic_firm.deployment import deployment_record_to_dict, latest_credential_status_records, list_deployment_records
@@ -102,6 +103,7 @@ def build_control_room_snapshot(store: Store | None = None, *, audience: str = "
             "publicEmptyStateReason": _public_empty_state_reason(tasks, human_tasks, public_reports),
             "deploymentSummary": _deployment_summary(store),
             "codeChangeSummary": _code_change_summary(store),
+            "autonomousOps": autonomous_ops_public_summary(),
             "agents": _agents_snapshot(registry, tasks, approvals),
             "tasks": [_task_snapshot(task, audience=audience) for task in tasks],
             "messages": _messages_summary(messages, audience=audience),

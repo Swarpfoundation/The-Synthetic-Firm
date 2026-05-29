@@ -26,6 +26,7 @@ from synthetic_firm.autonomous_workday import (
     start_workday,
     workday_to_dict,
 )
+from synthetic_firm.autonomous_ops import autonomous_ops_status, run_autonomous_ops_once
 from synthetic_firm.approval import approval_to_dict, create_approval_request, format_telegram_approval
 from synthetic_firm.approval_inbox import (
     approval_to_inbox_dict,
@@ -209,6 +210,8 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "code-proposal-review",
         "code-proposal-apply",
         "code-proposal-public-summary",
+        "autonomous-ops-status",
+        "autonomous-ops-once",
         "telegram-status",
         "telegram-founder-status",
         "telegram-dry-run-command",
@@ -461,6 +464,8 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     code_apply.add_argument("--live", action="store_true")
     code_apply.add_argument("--push", action="store_true")
     sub.add_parser("code-proposal-public-summary", help="Internal/dev: show public-safe Forge code proposal summary")
+    sub.add_parser("autonomous-ops-status", help="Internal/dev: show bounded autonomous code/deploy ops status")
+    sub.add_parser("autonomous-ops-once", help="Internal/dev: run one bounded autonomous code/deploy ops pass")
 
     sub.add_parser("telegram-status", help="Show Telegram founder-interface configuration status")
     sub.add_parser("telegram-founder-status", help="Internal/dev: show Telegram Founder Inbox readiness")
@@ -929,6 +934,12 @@ def _main_orchestrator(argv: list[str]) -> int:
         store = Store()
         _print_json(code_change_public_summary(store))
         store.close()
+        return 0
+    if args.command == "autonomous-ops-status":
+        _print_json(autonomous_ops_status())
+        return 0
+    if args.command == "autonomous-ops-once":
+        _print_json(run_autonomous_ops_once())
         return 0
     if args.command == "create-task":
         store = Store()

@@ -114,6 +114,25 @@ synthetic-firm scheduler-status
 Founder-facing work still flows through Telegram HumanTasks, and public progress
 remains read-only.
 
+## Autonomous Ops
+
+TSF can run a bounded autonomous operations pass after successful scheduler
+cycles. Approved Forge code-change proposals can be applied, tested, committed,
+optionally pushed to a controlled branch, and optionally routed through
+preview/staging deployment adapters. This is not an arbitrary shell and does not
+enable production deploys or merges to `main`.
+
+```bash
+synthetic-firm autonomous-ops-status
+synthetic-firm autonomous-ops-once
+```
+
+Live behavior requires explicit runtime gates such as
+`TSF_AUTONOMOUS_OPS_ENABLED`, `TSF_AUTONOMOUS_CODE_APPLY_ENABLED`,
+`TSF_AUTONOMOUS_CODE_PUSH_ENABLED`, `TSF_AUTONOMOUS_PREVIEW_DEPLOY_ENABLED`,
+`TSF_AUTONOMOUS_RENDER_DEPLOY_ENABLED`, `TSF_CODE_REPO_PATH`, and
+`TSF_CODE_TEST_COMMAND`.
+
 ## Deployment Operations
 
 TSF can prepare deployment-readiness plans for the public frontend on Vercel and
@@ -208,7 +227,7 @@ The Synthetic Firm does not currently implement:
 - investor outreach sending
 - production deployment
 - payment processing
-- unbounded autonomous repository write automation
+- unbounded shell or repository write automation
 - autonomous merge to main
 - active worker creation
 - autonomous permission escalation
@@ -243,6 +262,7 @@ auditable. Production deployment remains separately blocked.
 - [Autonomous Workday Engine](docs/the-synthetic-firm-autonomous-workday-engine.md)
 - [Autonomous Scheduler](docs/the-synthetic-firm-autonomous-scheduler.md)
 - [Forge Patch Pipeline](docs/the-synthetic-firm-forge-patch-pipeline.md)
+- [Autonomous Ops](docs/the-synthetic-firm-autonomous-ops.md)
 - [Truthfulness Guard](docs/the-synthetic-firm-truthfulness-guard.md)
 - [Human Task Inbox](docs/the-synthetic-firm-human-task-inbox.md)
 - [Telegram Founder Inbox](docs/the-synthetic-firm-telegram-founder-inbox.md)

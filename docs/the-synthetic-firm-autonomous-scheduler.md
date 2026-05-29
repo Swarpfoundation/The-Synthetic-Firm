@@ -54,6 +54,12 @@ Atlas reviews queued FounderMessages during scheduler checkpoints. Public
 exports include only founder-message counts and safe summaries; private Telegram
 message content stays out of the public API and Progress Window.
 
+After successful cycle checkpoints, the scheduler runs one bounded autonomous
+ops pass. That pass may apply internally approved code-change proposals, run
+tests, commit, optionally push a controlled branch, and optionally request
+preview/staging deployment adapters if explicit runtime gates are enabled. It
+does not execute arbitrary shell, merge to `main`, or deploy production.
+
 Infrastructure budget evaluation does not stop safe internal reasoning simply
 because provider/model spend is separate. It does create HumanTasks for unknown
 infrastructure costs and blocks new paid infrastructure actions at the hard
@@ -75,4 +81,5 @@ synthetic-firm scheduler-checkpoint-once
 synthetic-firm scheduler-status
 synthetic-firm scheduler-lock-status
 synthetic-firm scheduler-loop --max-runtime-seconds 300 --max-checkpoints 3
+synthetic-firm autonomous-ops-status
 ```

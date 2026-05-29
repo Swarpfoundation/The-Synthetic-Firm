@@ -18,6 +18,7 @@ from synthetic_firm.autonomous_workday import (
     run_cycle,
     start_workday,
 )
+from synthetic_firm.autonomous_ops import run_autonomous_ops_once
 from synthetic_firm.human_tasks import HumanTask, format_human_task_for_telegram
 from synthetic_firm.model_provider import provider_status
 from synthetic_firm.notification_queue import enqueue_notification
@@ -149,6 +150,8 @@ def run_checkpoint_once(
         _preflight_or_fail(store, evaluation)
         before_human_task_ids = {task.human_task_id for task in store.list_human_tasks()}
         result = _execute_checkpoint(store, evaluation)
+        if evaluation.checkpoint_type.startswith("cycle"):
+            result["autonomous_ops"] = run_autonomous_ops_once(store)
         notifications = enqueue_new_human_task_notifications(store, before_ids=before_human_task_ids)
         summary = f"{evaluation.checkpoint_type} completed. {len(notifications)} founder notification(s) queued."
         _finish_scheduler_run(
