@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import Mapping
 
+from synthetic_firm.budget_gate import check_budget_gate
+from synthetic_firm.cost_ledger import list_cost_items
 from synthetic_firm.deployment import DeploymentCheckResult, DeploymentPlan, DEPLOYMENT_TARGETS
 from synthetic_firm.provider_auth_redaction import redact_auth_text
 from synthetic_firm.store import Store
@@ -86,6 +88,11 @@ def evaluate_deployment_policy(
         return _decision(False, f"Runtime is {store.runtime_status()}; deployment blocked.", "production_blocked")
     if _deployment_count_today(store) >= policy.max_per_day:
         return _decision(False, "Daily deployment limit reached.", "production_blocked")
+    if plan.environment == "production" and not policy.autonomous_production:
+        return _decision(False, "Production deployments are disabled by default.", "production_blocked")
+    budget_gate = _deployment_budget_gate(store, plan, policy=policy)
+    if not budget_gate.allowed:
+        return _decision(False, budget_gate.reason, "production_blocked" if plan.environment == "production" else "validation_required")
     bad_command = _first_forbidden_command(plan.command_plan)
     if bad_command:
         return _decision(False, f"Forbidden deployment command blocked: {bad_command}", "failed")
@@ -97,8 +104,6 @@ def evaluate_deployment_policy(
     if policy.require_sentinel and "sentinel" not in plan.sentinel_review.lower():
         return _decision(False, "Sentinel review is required before deployment.", "validation_required")
     if plan.environment == "production":
-        if not policy.autonomous_production:
-            return _decision(False, "Production deployments are disabled by default.", "production_blocked")
         if not plan.rollback_plan.steps or not plan.health_check.checks:
             return _decision(False, "Production deployment requires rollback and health check plans.", "production_blocked")
         return _decision(True, "Production deployment policy gates passed.", "production_ready")
@@ -132,6 +137,24 @@ def _budget_known(store: Store) -> bool:
         return False
     totals = store.budget_totals()
     return totals["spend"] is not None
+
+
+def _deployment_budget_gate(store: Store, plan: DeploymentPlan, *, policy: DeploymentPolicy):
+    provider = "vercel" if plan.target == "vercel_frontend" else "render"
+    unknown = not _provider_cost_known(store, provider)
+    action = "production_deploy" if plan.environment == "production" else (
+        "vercel_preview_deploy" if plan.target == "vercel_frontend" else "render_deploy"
+    )
+    return check_budget_gate(
+        store,
+        action,
+        new_recurring_cost=plan.environment == "production",
+        unknown_cost_possible=unknown and not policy.dry_run,
+    )
+
+
+def _provider_cost_known(store: Store, provider: str) -> bool:
+    return any(item.provider.lower() == provider and item.confidence != "unknown" for item in list_cost_items(store))
 
 
 def _deployment_count_today(store: Store) -> int:

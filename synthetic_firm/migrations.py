@@ -282,6 +282,36 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
             human_task_required INTEGER NOT NULL,
             checked_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS cost_items (
+            cost_item_id TEXT PRIMARY KEY,
+            month TEXT NOT NULL,
+            category TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            service_name TEXT NOT NULL,
+            description TEXT NOT NULL,
+            amount_eur REAL,
+            amount_original REAL,
+            currency_original TEXT NOT NULL,
+            is_recurring INTEGER NOT NULL,
+            recurrence TEXT NOT NULL,
+            confidence TEXT NOT NULL,
+            source TEXT NOT NULL,
+            public_summary TEXT NOT NULL,
+            private_notes_redacted TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS cost_decisions (
+            decision_id TEXT PRIMARY KEY,
+            action_name TEXT NOT NULL,
+            allowed INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            known_monthly_burn_eur REAL NOT NULL,
+            projected_monthly_burn_eur REAL,
+            unknown_cost_count INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        );
         """
     )
     connection.commit()

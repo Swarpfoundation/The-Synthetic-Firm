@@ -1,0 +1,11 @@
+currency: EUR
+monthly_infrastructure_budget_eur: 100
+target_monthly_infrastructure_eur: 70
+warning_threshold_eur: 50
+high_threshold_eur: 75
+critical_threshold_eur: 90
+hard_stop_eur: 100
+model_api_budget_included: false
+default_provider_prices_are_estimates: true
+unknown_cost_policy: block
+new_paid_resource_policy: human_task_required

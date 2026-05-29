@@ -222,5 +222,10 @@ export const initialState: TsfState = {
     repositoryMode: null,
     lastAtlasReportAt: null,
     publicEmptyStateReason: null,
+    infrastructureBudgetStatus: null,
+    infrastructureBudgetSummary: null,
+    infrastructureBudgetMonthlyEur: null,
+    infrastructureBudgetKnownBurnEur: null,
+    infrastructureBudgetUnknownCosts: null,
   },
 };

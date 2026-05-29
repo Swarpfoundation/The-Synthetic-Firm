@@ -140,6 +140,24 @@ Production deploy remains disabled. Missing deployment tools or access create
 private HumanTasks for the founder. Credential values stay in environment
 variables and are not stored or printed.
 
+## Infrastructure Budget
+
+TSF has a hard infrastructure/deployment budget of `EUR 100/month`. It covers
+Render, Vercel, Neon/Postgres, cron/worker/backend hosting, storage,
+monitoring/logging, deployment services, and future domains/DNS. Model/API spend
+is excluded by default unless `model_api_budget_included` is enabled in the
+budget config.
+
+Unknown infrastructure cost blocks paid actions and creates HumanTasks for
+founder confirmation. New recurring paid resources require HumanTask approval.
+
+```bash
+synthetic-firm budget-status
+synthetic-firm budget-create-confirmation-tasks
+synthetic-firm budget-add-cost --provider render --service "Render API service" --amount-eur 7 --recurrence monthly --confidence estimated
+synthetic-firm budget-public-summary
+```
+
 ## Public Progress Website
 
 ```bash
@@ -212,6 +230,8 @@ The Synthetic Firm does not currently implement:
 - [Provider-Backed Reasoning](docs/the-synthetic-firm-provider-backed-reasoning.md)
 - [Agent Reasoning Contexts](docs/the-synthetic-firm-agent-reasoning-contexts.md)
 - [Model Budgeting](docs/the-synthetic-firm-model-budgeting.md)
+- [Infrastructure Budget Policy](docs/the-synthetic-firm-budget-policy.md)
+- [Infrastructure Burn](docs/the-synthetic-firm-infrastructure-burn.md)
 - [Public Progress Frontend](docs/the-synthetic-firm-control-room-frontend.md)
 - [Public Progress API](docs/the-synthetic-firm-control-room-api.md)
 - [Public Progress Window](docs/the-synthetic-firm-public-progress-window.md)

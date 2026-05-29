@@ -112,6 +112,22 @@ def test_agent_turn_missing_provider_creates_blocker_and_human_task(monkeypatch,
     store.close()
 
 
+def test_forge_provider_ready_fallback_uses_valid_channel(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    monkeypatch.setattr("synthetic_firm.autonomous_workday._provider_reasoning_turn", lambda *args, **kwargs: None)
+    monkeypatch.setattr("synthetic_firm.autonomous_workday._provider_ready", lambda: "kimi-code")
+    store = Store()
+    start_workday(store)
+
+    result = run_agent_turn(store, agent_id="forge")
+    messages = store.list_messages(channel="forge")
+
+    assert result["summary"] == "Forge detected provider route kimi-code."
+    assert messages
+    assert messages[0].channel == "forge"
+    store.close()
+
+
 def test_truthfulness_guard_blocks_fake_claims():
     result = evaluate_public_claims("We made $1000 revenue and signed 5 customers.", evidence=[])
 

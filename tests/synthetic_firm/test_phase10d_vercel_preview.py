@@ -4,6 +4,7 @@ import json
 import subprocess
 
 from synthetic_firm.control_room_export import build_control_room_snapshot
+from synthetic_firm.cost_ledger import add_cost_item
 from synthetic_firm.deployment_health import run_vercel_preview_health_check
 from synthetic_firm.store import Store
 from synthetic_firm.vercel_adapter import deploy_vercel_preview, validate_vercel_command, vercel_credential_status
@@ -87,6 +88,16 @@ def test_failed_preview_command_records_safe_failure(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_VERCEL_PROJECT_PATH", str(project))
     monkeypatch.setattr("synthetic_firm.vercel_adapter.shutil.which", lambda name: "/usr/bin/vercel")
     store = Store()
+    add_cost_item(
+        store,
+        category="vercel",
+        provider="vercel",
+        service_name="Vercel public Progress Window",
+        description="Founder-confirmed preview deployment cost is within budget.",
+        amount_eur=0,
+        recurrence="monthly",
+        confidence="estimated",
+    )
 
     def runner(command, cwd, env):
         assert command == ["vercel", "deploy", "--yes", "--target", "preview"]
@@ -110,6 +121,16 @@ def test_preview_command_rejects_production_target_output(monkeypatch, tmp_path)
     monkeypatch.setenv("TSF_VERCEL_PROJECT_PATH", str(project))
     monkeypatch.setattr("synthetic_firm.vercel_adapter.shutil.which", lambda name: "/usr/bin/vercel")
     store = Store()
+    add_cost_item(
+        store,
+        category="vercel",
+        provider="vercel",
+        service_name="Vercel public Progress Window",
+        description="Founder-confirmed preview deployment cost is within budget.",
+        amount_eur=0,
+        recurrence="monthly",
+        confidence="estimated",
+    )
 
     def runner(command, cwd, env):
         return subprocess.CompletedProcess(

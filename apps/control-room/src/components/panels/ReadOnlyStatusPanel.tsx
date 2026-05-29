@@ -45,6 +45,8 @@ export function ReadOnlyStatusPanel() {
               <span>next checkpoint: {metadata.nextCheckpoint || 'next workday'}</span>
               <span>deployment: {metadata.deploymentState || 'not_started'}</span>
               <span>storage: {metadata.storeBackendPublicStatus || 'sqlite_preview'}</span>
+              <span>infra budget: {metadata.infrastructureBudgetStatus || 'tracking'}</span>
+              <span>budget cap: €{metadata.infrastructureBudgetMonthlyEur ?? 100}/mo</span>
               <span>repository: {metadata.repositoryMode || 'sqlite_active'}</span>
               <span>Atlas report: {metadata.lastAtlasReportAt ? new Date(metadata.lastAtlasReportAt).toLocaleTimeString() : 'none'}</span>
               <span className="flex items-center gap-1">
@@ -66,6 +68,9 @@ export function ReadOnlyStatusPanel() {
             )}
             {metadata.storageSummary && (
               <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.storageSummary}</p>
+            )}
+            {metadata.infrastructureBudgetSummary && (
+              <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.infrastructureBudgetSummary}</p>
             )}
             {metadata.publicEmptyStateReason && (
               <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.publicEmptyStateReason}</p>

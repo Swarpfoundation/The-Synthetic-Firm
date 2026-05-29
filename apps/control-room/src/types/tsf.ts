@@ -212,5 +212,10 @@ export interface TsfState {
     repositoryMode: string | null;
     lastAtlasReportAt: string | null;
     publicEmptyStateReason: string | null;
+    infrastructureBudgetStatus: string | null;
+    infrastructureBudgetSummary: string | null;
+    infrastructureBudgetMonthlyEur: number | null;
+    infrastructureBudgetKnownBurnEur: number | null;
+    infrastructureBudgetUnknownCosts: number | null;
   };
 }

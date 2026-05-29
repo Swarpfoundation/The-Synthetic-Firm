@@ -49,7 +49,7 @@ def verify_postgres_migration_plan(plan: PostgresMigrationPlan | None = None) ->
     plan = plan or postgres_migration_plan()
     if plan.destructive:
         return False, "Postgres migration plan contains destructive SQL and is blocked."
-    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records"}
+    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records", "cost_items", "cost_decisions"}
     present = {
         token.strip('"')
         for statement in plan.statements
@@ -126,7 +126,7 @@ def inspect_postgres_schema(database_url: str) -> dict[str, object]:
                     version = int(row["version"]) if row else 0
     except Exception as exc:  # noqa: BLE001
         return {"connected": False, "schemaReady": False, "summary": redact_db_text(f"Postgres schema check failed: {exc}")}
-    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records"}
+    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records", "cost_items", "cost_decisions"}
     missing = sorted(required - tables)
     ready = not missing and version >= POSTGRES_SCHEMA_VERSION
     return {
@@ -450,6 +450,40 @@ CREATE TABLE IF NOT EXISTS deployment_credential_status (
     checked_at TEXT NOT NULL
 );
 """.strip()
+    yield """
+CREATE TABLE IF NOT EXISTS cost_items (
+    cost_item_id TEXT PRIMARY KEY,
+    month TEXT NOT NULL,
+    category TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    service_name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount_eur DOUBLE PRECISION,
+    amount_original DOUBLE PRECISION,
+    currency_original TEXT NOT NULL,
+    is_recurring INTEGER NOT NULL,
+    recurrence TEXT NOT NULL,
+    confidence TEXT NOT NULL,
+    source TEXT NOT NULL,
+    public_summary TEXT NOT NULL,
+    private_notes_redacted TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+""".strip()
+    yield """
+CREATE TABLE IF NOT EXISTS cost_decisions (
+    decision_id TEXT PRIMARY KEY,
+    action_name TEXT NOT NULL,
+    allowed INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    known_monthly_burn_eur DOUBLE PRECISION NOT NULL,
+    projected_monthly_burn_eur DOUBLE PRECISION,
+    unknown_cost_count INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+""".strip()
     yield "CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);"
     yield "CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(assigned_agent_id);"
     yield "CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);"
@@ -457,6 +491,7 @@ CREATE TABLE IF NOT EXISTS deployment_credential_status (
     yield "CREATE INDEX IF NOT EXISTS idx_human_tasks_status ON human_tasks(status);"
     yield "CREATE INDEX IF NOT EXISTS idx_scheduler_runs_started ON scheduler_runs(started_at);"
     yield "CREATE INDEX IF NOT EXISTS idx_deployment_records_updated ON deployment_records(updated_at);"
+    yield "CREATE INDEX IF NOT EXISTS idx_cost_items_month ON cost_items(month);"
     yield f"INSERT INTO schema_migrations (version, applied_at) VALUES ({POSTGRES_SCHEMA_VERSION}, now()::text) ON CONFLICT (version) DO NOTHING;"
     yield "INSERT INTO runtime_status (singleton_id, status, updated_at) VALUES (1, 'active', now()::text) ON CONFLICT (singleton_id) DO NOTHING;"
 

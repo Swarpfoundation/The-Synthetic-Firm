@@ -99,6 +99,19 @@ It must not include tokens, service ids, private deployment logs, environment
 variables, project secrets, or internal Render/Vercel account details. Visitors
 cannot trigger deployment from the public site.
 
+## Infrastructure Budget Visibility
+
+The public snapshot may include sanitized infrastructure budget status:
+
+- monthly infrastructure budget: `EUR 100`
+- budget status: healthy, watching, high, critical, or blocked
+- public-safe known burn estimate
+- unknown cost count
+- public-safe budget note
+
+The public site must not show private invoices, provider billing details, card
+details, database URLs, tokens, service IDs, or private account metadata.
+
 ## Deployment Direction
 
 Recommended later deployment shape:

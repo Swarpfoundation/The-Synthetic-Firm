@@ -110,6 +110,11 @@ export function snapshotToState(snapshot: ControlRoomSnapshot): Partial<TsfState
       repositoryMode: snapshot.storage?.repositoryMode || null,
       lastAtlasReportAt: snapshot.lastAtlasReportAt || null,
       publicEmptyStateReason: snapshot.publicEmptyStateReason || null,
+      infrastructureBudgetStatus: snapshot.infrastructureBudget?.status || null,
+      infrastructureBudgetSummary: snapshot.infrastructureBudget?.summary || null,
+      infrastructureBudgetMonthlyEur: snapshot.infrastructureBudget?.monthlyInfrastructureBudgetEur || null,
+      infrastructureBudgetKnownBurnEur: snapshot.infrastructureBudget?.knownMonthlyBurnEur ?? null,
+      infrastructureBudgetUnknownCosts: snapshot.infrastructureBudget?.unknownCostCount ?? null,
     },
   };
 }

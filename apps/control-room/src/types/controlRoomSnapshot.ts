@@ -97,6 +97,7 @@ export interface ControlRoomSnapshot {
   approvals: SnapshotApproval[];
   executionQueue: SnapshotExecutionQueueItem[];
   budget: SnapshotBudget;
+  infrastructureBudget?: SnapshotInfrastructureBudget;
   reports: SnapshotReport[];
   publicDailyReport?: SnapshotPublicDailyReport;
   privateFounderReport?: Record<string, unknown> | null;
@@ -242,6 +243,19 @@ export interface SnapshotBudget {
     loopSteps: number;
     toolCalls: number;
   }>;
+}
+
+export interface SnapshotInfrastructureBudget {
+  currency: string;
+  monthlyInfrastructureBudgetEur: number;
+  targetMonthlyInfrastructureEur?: number;
+  status: 'healthy' | 'watching' | 'high' | 'critical' | 'blocked' | 'tracking' | string;
+  knownMonthlyBurnEur?: number;
+  projectedMonthlyBurnEur?: number | null;
+  unknownCostCount?: number;
+  unknownRecurringCount?: number;
+  modelApiBudgetIncluded?: boolean;
+  summary: string;
 }
 
 export interface SnapshotReport {

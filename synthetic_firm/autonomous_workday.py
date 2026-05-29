@@ -618,7 +618,7 @@ def _forge_turn(store: Store, workday: WorkdayState) -> dict[str, Any]:
         )
     store.create_message(
         sender_agent_id="forge",
-        channel="builder",
+        channel="forge",
         message_type="status",
         content=f"Forge has provider route {provider} available for future bounded build work.",
     )

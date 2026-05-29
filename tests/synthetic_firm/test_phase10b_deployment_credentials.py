@@ -5,6 +5,7 @@ import subprocess
 
 from synthetic_firm.cli import main
 from synthetic_firm.control_room_export import build_control_room_snapshot
+from synthetic_firm.cost_ledger import add_cost_item
 from synthetic_firm.deployment import credential_status_to_dict
 from synthetic_firm.render_adapter import (
     deploy_render_service,
@@ -80,6 +81,16 @@ def test_vercel_live_preview_uses_env_token_not_command_string(monkeypatch, tmp_
     (project / "package.json").write_text('{"scripts":{"build":"vite build","typecheck":"tsc -b"}}', encoding="utf-8")
     monkeypatch.setenv("TSF_VERCEL_PROJECT_PATH", str(project))
     store = Store()
+    add_cost_item(
+        store,
+        category="vercel",
+        provider="vercel",
+        service_name="Vercel public Progress Window",
+        description="Founder-confirmed preview deploy cost is within budget.",
+        amount_eur=0,
+        recurrence="monthly",
+        confidence="estimated",
+    )
     seen: dict[str, object] = {}
 
     def runner(command, cwd, env):

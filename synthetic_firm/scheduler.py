@@ -463,6 +463,9 @@ def _preflight_or_fail(store: Store, evaluation: SchedulerEvaluation) -> None:
     if evaluation.checkpoint_type.startswith("cycle") and not evaluation.workday_inside:
         raise SchedulerError("Cycle checkpoint is outside work hours")
     _budget_or_fail(store)
+    infra_budget = check_budget_gate(store, "scheduler_checkpoint", create_tasks=True)
+    if infra_budget.status == "blocked":
+        raise SchedulerError("Infrastructure budget hard stop reached")
     if _checkpoint_count_today(store) >= MAX_CHECKPOINTS_PER_DAY:
         store.append_audit(
             actor_type="orchestrator",
@@ -662,3 +665,4 @@ def _local_now(config: WorkdayConfig, now: datetime | None) -> datetime:
     if now.tzinfo is None:
         return now.replace(tzinfo=tz)
     return now.astimezone(tz)
+from synthetic_firm.budget_gate import check_budget_gate

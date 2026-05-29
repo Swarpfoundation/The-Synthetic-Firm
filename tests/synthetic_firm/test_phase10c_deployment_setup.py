@@ -5,6 +5,7 @@ import subprocess
 
 from synthetic_firm.cli import main
 from synthetic_firm.control_room_export import build_control_room_snapshot
+from synthetic_firm.cost_ledger import add_cost_item
 from synthetic_firm.deployment_health import run_vercel_preview_health_check
 from synthetic_firm.render_adapter import render_credential_status
 from synthetic_firm.store import Store
@@ -70,6 +71,16 @@ def test_vercel_preview_live_gate_executes_only_with_explicit_setup(monkeypatch,
         return subprocess.CompletedProcess(command, 0, stdout="https://phase10c-preview.vercel.app\n", stderr="")
 
     store = Store()
+    add_cost_item(
+        store,
+        category="vercel",
+        provider="vercel",
+        service_name="Vercel public Progress Window",
+        description="Founder-confirmed preview deployment cost is within budget.",
+        amount_eur=0,
+        recurrence="monthly",
+        confidence="estimated",
+    )
     result = deploy_vercel_preview(store, dry_run=False, runner=runner)
 
     assert result["executed"] is True

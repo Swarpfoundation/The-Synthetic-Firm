@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from synthetic_firm.agent_registry import AgentProfile, AgentRegistry
+from synthetic_firm.cost_ledger import budget_private_report, budget_public_summary
 from synthetic_firm.deployment import deployment_record_to_dict, latest_credential_status_records, list_deployment_records
 from synthetic_firm.execution_queue import list_queue
 from synthetic_firm.founder_messages import founder_message_to_dict
@@ -105,9 +106,10 @@ def build_control_room_snapshot(store: Store | None = None, *, audience: str = "
             "approvals": [_approval_snapshot(row, audience=audience) for row in approvals],
             "executionQueue": [_queue_snapshot(item) for item in queue],
             "budget": budget,
+            "infrastructureBudget": _infrastructure_budget_snapshot(store, audience=audience),
             "reports": [_report_snapshot(report) for report in (public_reports if audience == "public" else reports)[:10]],
             "publicDailyReport": public_report,
-            "privateFounderReport": _private_founder_report(tasks, human_tasks, reports, runtime_status, workday)
+            "privateFounderReport": _private_founder_report(store, tasks, human_tasks, reports, runtime_status, workday)
             if audience == "founder"
             else None,
             "humanTasks": [_human_task_snapshot(task, audience=audience) for task in human_tasks],
@@ -284,6 +286,21 @@ def _deployment_summary(store: Store) -> dict[str, Any]:
         "summary": _safe(latest.public_summary, public=True) if latest else "No public deployment activity yet.",
         "history": [deployment_record_to_dict(record, public=True) for record in records],
     }
+
+
+def _infrastructure_budget_snapshot(store: Store, *, audience: str) -> dict[str, Any]:
+    try:
+        public = budget_public_summary(store)
+        if audience == "founder":
+            public["privateReport"] = budget_private_report(store)
+        return _sanitize_mapping(public, public=audience == "public")
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "monthlyInfrastructureBudgetEur": 100.0,
+            "status": "tracking",
+            "unknownCostCount": 1,
+            "summary": _safe(f"Infrastructure budget tracking needs setup: {exc}", public=True),
+        }
 
 
 def _deployment_health_status(record: Any | None) -> str:
@@ -628,6 +645,7 @@ def _public_daily_report(
 
 
 def _private_founder_report(
+    store: Store,
     tasks: list[Any],
     human_tasks: list[Any],
     reports: list[dict[str, str]],
@@ -641,6 +659,7 @@ def _private_founder_report(
         "exactHumanTasks": [_human_task_snapshot(task, audience="founder") for task in human_tasks[:50]],
         "privateBlockers": [_safe(task.plain_english_summary, public=False) for task in tasks if task.status == "blocked"],
         "operationalNotes": [_safe(report["content"], limit=1000, public=False) for report in reports[:5]],
+        "infrastructureBudget": budget_private_report(store),
         "truthfulness": "Based on real TSF runtime data. No mock data. No fabricated progress.",
     }
 

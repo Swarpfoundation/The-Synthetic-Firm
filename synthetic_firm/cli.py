@@ -34,9 +34,19 @@ from synthetic_firm.approval_inbox import (
 )
 from synthetic_firm.approval_signing import default_expiry, sign_approval_decision, verify_signed_decision
 from synthetic_firm.budget import BudgetPolicy, BudgetUsage, budget_status_text, evaluate_budget
+from synthetic_firm.budget_gate import check_budget_gate
 from synthetic_firm.budget_log import append_budget_log
 from synthetic_firm.control_room_export import export_control_room_state
 from synthetic_firm.control_room_api import serve_control_room_api
+from synthetic_firm.cost_ledger import (
+    add_cost_item,
+    budget_private_report,
+    budget_public_summary,
+    cost_item_to_dict,
+    create_budget_confirmation_tasks,
+    list_cost_items,
+    monthly_budget_state,
+)
 from synthetic_firm.deployment import (
     credential_status_to_dict,
     deployment_plan_to_dict,
@@ -171,6 +181,12 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "runtime-status",
         "list-daily-reports",
         "budget-status",
+        "budget-add-cost",
+        "budget-list-costs",
+        "budget-monthly-report",
+        "budget-check-action",
+        "budget-create-confirmation-tasks",
+        "budget-public-summary",
         "telegram-status",
         "telegram-dry-run-command",
         "telegram-poll-once",
@@ -377,6 +393,26 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     budget_status = sub.add_parser("budget-status", help="Show persisted budget totals")
     budget_status.add_argument("--agent-id")
     budget_status.add_argument("--task-id")
+    budget_add = sub.add_parser("budget-add-cost", help="Internal/dev: add infrastructure budget cost item")
+    budget_add.add_argument("--provider", required=True)
+    budget_add.add_argument("--service", required=True)
+    budget_add.add_argument("--description", default="Infrastructure cost item.")
+    budget_add.add_argument("--amount-eur", type=float)
+    budget_add.add_argument("--category", default="other_infrastructure")
+    budget_add.add_argument("--recurrence", default="monthly")
+    budget_add.add_argument("--confidence", default="estimated")
+    budget_add.add_argument("--source", default="manual")
+    budget_add.add_argument("--public-summary")
+    budget_list = sub.add_parser("budget-list-costs", help="Internal/dev: list infrastructure budget cost items")
+    budget_list.add_argument("--month")
+    budget_list.add_argument("--category")
+    sub.add_parser("budget-monthly-report", help="Internal/dev: show private infrastructure budget report")
+    budget_check = sub.add_parser("budget-check-action", help="Internal/dev: check an infrastructure budget action")
+    budget_check.add_argument("action_name")
+    budget_check.add_argument("--new-recurring-cost", action="store_true")
+    budget_check.add_argument("--unknown-cost-possible", action="store_true")
+    sub.add_parser("budget-create-confirmation-tasks", help="Internal/dev: create infrastructure cost confirmation HumanTasks")
+    sub.add_parser("budget-public-summary", help="Internal/dev: show public-safe infrastructure budget summary")
 
     sub.add_parser("telegram-status", help="Show Telegram founder-interface configuration status")
     telegram_dry = sub.add_parser("telegram-dry-run-command", help="Handle a Telegram command without network calls")
@@ -739,6 +775,55 @@ def _main_orchestrator(argv: list[str]) -> int:
         decision = evaluate_budget(policy, usage)
         _print_json({"summary": budget_status_text(policy, usage), **asdict(decision)})
         return 0
+    if args.command == "budget-add-cost":
+        store = Store()
+        item = add_cost_item(
+            store,
+            category=args.category,
+            provider=args.provider,
+            service_name=args.service,
+            description=args.description,
+            amount_eur=args.amount_eur,
+            recurrence=args.recurrence,
+            confidence=args.confidence,
+            source=args.source,
+            public_summary=args.public_summary,
+        )
+        _print_json({"summary": "Infrastructure cost item recorded.", "costItem": cost_item_to_dict(item)})
+        store.close()
+        return 0
+    if args.command == "budget-list-costs":
+        store = Store()
+        _print_json({"costItems": [cost_item_to_dict(item) for item in list_cost_items(store, month=args.month, category=args.category)]})
+        store.close()
+        return 0
+    if args.command == "budget-monthly-report":
+        store = Store()
+        _print_json(budget_private_report(store))
+        store.close()
+        return 0
+    if args.command == "budget-check-action":
+        store = Store()
+        decision = check_budget_gate(
+            store,
+            args.action_name,
+            new_recurring_cost=args.new_recurring_cost,
+            unknown_cost_possible=args.unknown_cost_possible,
+        )
+        _print_json({"decision": decision.to_dict()})
+        store.close()
+        return 0 if decision.allowed else 1
+    if args.command == "budget-create-confirmation-tasks":
+        store = Store()
+        task_ids = create_budget_confirmation_tasks(store)
+        _print_json({"summary": f"Created {len(task_ids)} budget confirmation HumanTask(s).", "humanTaskIds": list(task_ids)})
+        store.close()
+        return 0
+    if args.command == "budget-public-summary":
+        store = Store()
+        _print_json(budget_public_summary(store))
+        store.close()
+        return 0
     if args.command == "create-task":
         store = Store()
         task = store.create_task(
@@ -870,7 +955,13 @@ def _main_orchestrator(argv: list[str]) -> int:
     if args.command == "budget-status":
         store = Store()
         totals = store.budget_totals(agent_id=args.agent_id, task_id=args.task_id)
-        _print_json({"summary": "Persisted budget totals loaded.", **totals})
+        _print_json(
+            {
+                "summary": "Persisted budget totals loaded.",
+                "runtimeBudget": totals,
+                "infrastructureBudget": monthly_budget_state(store).to_dict(),
+            }
+        )
         store.close()
         return 0
     if args.command == "telegram-status":

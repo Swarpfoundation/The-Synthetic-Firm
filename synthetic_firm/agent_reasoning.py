@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from synthetic_firm.budget_gate import safe_budget_context
 from synthetic_firm.llm_client import AgentReasoningRequest
 from synthetic_firm.provider_auth_redaction import redact_auth_text
 from synthetic_firm.store import Store
@@ -120,6 +121,7 @@ def build_agent_context(
         "message_summary": message_summary or ["No internal messages."],
         "report_summary": report_summary or ["No reports."],
         "capability_note": capability_note,
+        "infrastructure_budget": safe_budget_context(store),
         "missing_data_rule": "If evidence is missing, say missing and create blockers or HumanTasks instead of pretending.",
     }
     return redact_auth_text(json.dumps(context, sort_keys=True))
@@ -187,4 +189,5 @@ def _budget_context(store: Store, *, agent_id: str, task_id: str | None) -> dict
         "company_daily_spend_usd": company["spend"],
         "task_loop_steps": task["loop_steps"],
         "task_tool_calls": task["tool_calls"],
+        "infrastructure_budget": safe_budget_context(store),
     }

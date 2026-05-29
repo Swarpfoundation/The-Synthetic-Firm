@@ -40,6 +40,7 @@ Before work runs, the scheduler checks:
 - runtime is active
 - audit log verifies
 - budget is configured and within limit
+- infrastructure budget state is evaluated
 - workday window permits the checkpoint
 - scheduler lock is available
 - daily checkpoint limits are not exceeded
@@ -47,6 +48,11 @@ Before work runs, the scheduler checks:
 Paused runtime blocks agent cycles. Killed runtime blocks scheduler work except
 status inspection. Provider unavailability creates blocked tasks or HumanTasks
 instead of fake progress.
+
+Infrastructure budget evaluation does not stop safe internal reasoning simply
+because provider/model spend is separate. It does create HumanTasks for unknown
+infrastructure costs and blocks new paid infrastructure actions at the hard
+`EUR 100/month` stop.
 
 ## Locks
 
@@ -65,4 +71,3 @@ synthetic-firm scheduler-status
 synthetic-firm scheduler-lock-status
 synthetic-firm scheduler-loop --max-runtime-seconds 300 --max-checkpoints 3
 ```
-
