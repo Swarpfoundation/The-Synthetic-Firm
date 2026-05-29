@@ -135,7 +135,15 @@ from synthetic_firm.telegram_adapter import (
     handle_telegram_command_dry_run,
     parse_telegram_command,
 )
-from synthetic_firm.telegram_live import handle_control_command, load_telegram_config, poll_once, telegram_status
+from synthetic_firm.telegram_live import (
+    handle_control_command,
+    handle_founder_telegram_text,
+    load_telegram_config,
+    poll_once,
+    send_pending_notifications,
+    telegram_founder_smoke,
+    telegram_status,
+)
 from synthetic_firm.workday import evaluate_workday, load_workday_config
 
 
@@ -188,8 +196,11 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "budget-create-confirmation-tasks",
         "budget-public-summary",
         "telegram-status",
+        "telegram-founder-status",
         "telegram-dry-run-command",
         "telegram-poll-once",
+        "telegram-send-pending-notifications",
+        "telegram-founder-smoke",
         "list-approvals",
         "show-approval",
         "approve",
@@ -415,10 +426,19 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     sub.add_parser("budget-public-summary", help="Internal/dev: show public-safe infrastructure budget summary")
 
     sub.add_parser("telegram-status", help="Show Telegram founder-interface configuration status")
+    sub.add_parser("telegram-founder-status", help="Internal/dev: show Telegram Founder Inbox readiness")
     telegram_dry = sub.add_parser("telegram-dry-run-command", help="Handle a Telegram command without network calls")
     telegram_dry.add_argument("text")
     telegram_dry.add_argument("--chat-id", default="dry-run-founder")
     sub.add_parser("telegram-poll-once", help="Run one safe Telegram polling cycle")
+    send_pending = sub.add_parser(
+        "telegram-send-pending-notifications",
+        help="Internal/dev: send or dry-run queued Telegram notifications",
+    )
+    send_pending.add_argument("--live", action="store_true")
+    founder_smoke = sub.add_parser("telegram-founder-smoke", help="Internal/dev: validate Telegram Founder Inbox")
+    founder_smoke.add_argument("--dry-run", action="store_true")
+    founder_smoke.add_argument("--live", action="store_true")
 
     sub.add_parser("list-approvals", help="List pending approval inbox items")
     show_approval = sub.add_parser("show-approval", help="Show one approval inbox item")
@@ -964,7 +984,7 @@ def _main_orchestrator(argv: list[str]) -> int:
         )
         store.close()
         return 0
-    if args.command == "telegram-status":
+    if args.command in {"telegram-status", "telegram-founder-status"}:
         _print_json(telegram_status())
         return 0
     if args.command == "telegram-dry-run-command":
@@ -978,7 +998,10 @@ def _main_orchestrator(argv: list[str]) -> int:
                 allowed_chat_ids=frozenset({chat_id}),
                 mode="dry_run",
             )
-        response = handle_control_command(store, parse_telegram_command(args.text), chat_id=chat_id, config=config)
+        if str(args.text).strip().startswith("/"):
+            response = handle_control_command(store, parse_telegram_command(args.text), chat_id=chat_id, config=config)
+        else:
+            response = handle_founder_telegram_text(store, args.text, chat_id=chat_id, config=config)
         print(response)
         store.close()
         return 0
@@ -986,6 +1009,16 @@ def _main_orchestrator(argv: list[str]) -> int:
         store = Store()
         print(poll_once(store))
         store.close()
+        return 0
+    if args.command == "telegram-send-pending-notifications":
+        store = Store()
+        _print_json(send_pending_notifications(store, live=args.live))
+        store.close()
+        return 0
+    if args.command == "telegram-founder-smoke":
+        if args.live and args.dry_run:
+            raise SystemExit("--live and --dry-run are mutually exclusive")
+        _print_json(telegram_founder_smoke(live=args.live))
         return 0
     if args.command == "list-approvals":
         store = Store()

@@ -49,6 +49,10 @@ Paused runtime blocks agent cycles. Killed runtime blocks scheduler work except
 status inspection. Provider unavailability creates blocked tasks or HumanTasks
 instead of fake progress.
 
+Atlas reviews queued FounderMessages during scheduler checkpoints. Public
+exports include only founder-message counts and safe summaries; private Telegram
+message content stays out of the public API and Progress Window.
+
 Infrastructure budget evaluation does not stop safe internal reasoning simply
 because provider/model spend is separate. It does create HumanTasks for unknown
 infrastructure costs and blocks new paid infrastructure actions at the hard

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import secrets
+import json
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Callable
+from urllib import parse, request
 
 from synthetic_firm.approval_inbox import (
     approval_to_inbox_dict,
@@ -25,6 +27,21 @@ class TelegramLiveError(ValueError):
     """Raised when Telegram founder-interface checks fail closed."""
 
 
+FOUNDER_INBOX_COMMANDS = frozenset(
+    {
+        "founder_message",
+        "human_tasks",
+        "human_task",
+        "done",
+        "blocked",
+        "note",
+        "status",
+        "report",
+        "help",
+    }
+)
+
+
 @dataclass(frozen=True)
 class TelegramConfig:
     enabled: bool
@@ -35,8 +52,8 @@ class TelegramConfig:
     def require_live_ready(self) -> None:
         if not self.enabled:
             raise TelegramLiveError("Telegram live mode is disabled")
-        if self.mode not in {"dry_run", "polling"}:
-            raise TelegramLiveError("Telegram mode must be dry_run or polling")
+        if self.mode not in {"polling", "bounded_polling"}:
+            raise TelegramLiveError("Telegram mode must be polling or bounded_polling")
         if not self.bot_token:
             raise TelegramLiveError("Telegram bot token is required for live mode")
         if not self.allowed_chat_ids:
@@ -74,7 +91,10 @@ def telegram_status(config: TelegramConfig | None = None) -> dict[str, object]:
         "enabled": cfg.enabled,
         "mode": cfg.mode,
         "allowed_chat_count": len(cfg.allowed_chat_ids),
+        "allowed_chat_ids_configured": bool(cfg.allowed_chat_ids),
         "bot_token_configured": bool(cfg.bot_token),
+        "token_present": bool(cfg.bot_token),
+        "founder_inbox_mode": _founder_inbox_live_mode(cfg),
         "summary": "Telegram founder interface is configured for dry-run."
         if not cfg.enabled
         else "Telegram founder interface is enabled.",
@@ -88,7 +108,7 @@ def validate_chat(store: Store, config: TelegramConfig, chat_id: str) -> None:
             actor_id="unknown_chat",
             action="telegram_reject_chat",
             target_type="chat",
-            target_id=str(chat_id),
+            target_id="unknown_chat",
             risk_level="high",
             summary="Rejected Telegram command from unknown chat id.",
         )
@@ -104,6 +124,17 @@ def handle_control_command(
 ) -> str:
     cfg = config or load_telegram_config()
     validate_chat(store, cfg, chat_id)
+    if _founder_inbox_live_mode(cfg) and command.command not in FOUNDER_INBOX_COMMANDS:
+        store.append_audit(
+            actor_type="telegram",
+            actor_id="founder_inbox",
+            action="telegram_command_blocked",
+            target_type="telegram_command",
+            target_id=command.command,
+            risk_level="high",
+            summary="Blocked Telegram remote-control command in Founder Inbox mode.",
+        )
+        raise TelegramLiveError("Telegram Founder Inbox mode blocks remote-control commands")
     runtime = store.runtime_status()
     human_task_commands = {"human_tasks", "human_task", "done", "blocked", "note"}
     if runtime == "killed" and command.command not in {"status", "help", *human_task_commands}:
@@ -301,11 +332,44 @@ def poll_once(
         return "Dry-run polling cycle completed without network access."
     cfg.require_live_ready()
     if fetch_update is None:
-        raise TelegramLiveError("Polling requires an injected update fetcher in Phase 4")
+        fetch_update = lambda: _fetch_telegram_update(store, cfg)
     update = fetch_update()
     if update is None:
         return "No Telegram command received."
     return handle_founder_telegram_text(store, update.text, chat_id=update.chat_id, config=cfg)
+
+
+def send_pending_notifications(
+    store: Store,
+    *,
+    config: TelegramConfig | None = None,
+    live: bool = False,
+) -> dict[str, object]:
+    from synthetic_firm.notification_queue import send_notifications
+
+    cfg = config or load_telegram_config()
+    if not live:
+        sent = send_notifications(store, dry_run=True, config=cfg)
+        return {"sent": len(sent), "live": False, "summary": "Dry-run Telegram notifications marked safely."}
+    cfg.require_live_ready()
+    sent = send_notifications(
+        store,
+        dry_run=False,
+        config=cfg,
+        sender=lambda chat_id, body: _send_telegram_message(cfg, chat_id=chat_id, body=body),
+    )
+    return {"sent": len(sent), "live": True, "summary": "Pending Telegram notifications sent."}
+
+
+def telegram_founder_smoke(*, config: TelegramConfig | None = None, live: bool = False) -> dict[str, object]:
+    cfg = config or load_telegram_config()
+    status = telegram_status(cfg)
+    if live:
+        cfg.require_live_ready()
+        status["summary"] = "Telegram Founder Inbox live readiness passed."
+    else:
+        status["summary"] = "Telegram Founder Inbox dry-run readiness passed."
+    return status
 
 
 def _approval_line(item: dict[str, object]) -> str:
@@ -332,8 +396,86 @@ def _help_text() -> str:
             "Read-only status commands:",
             "/status",
             "/report",
-            "/budget",
-            "/tasks",
             "/help",
         ]
     )
+
+
+def _founder_inbox_live_mode(config: TelegramConfig) -> bool:
+    return config.enabled and config.mode in {"polling", "bounded_polling"}
+
+
+def _fetch_telegram_update(store: Store, config: TelegramConfig) -> TelegramUpdate | None:
+    token = config.bot_token
+    if not token:
+        raise TelegramLiveError("Telegram bot token is required")
+    offset = _get_poll_offset(store)
+    params = {
+        "timeout": os.environ.get("TSF_TELEGRAM_POLL_TIMEOUT_SECONDS", "0"),
+        "limit": "1",
+        "allowed_updates": json.dumps(["message"]),
+    }
+    if offset is not None:
+        params["offset"] = str(offset + 1)
+    url = f"https://api.telegram.org/bot{token}/getUpdates?{parse.urlencode(params)}"
+    try:
+        with request.urlopen(url, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise TelegramLiveError(f"Telegram polling failed safely: {type(exc).__name__}") from exc
+    if not payload.get("ok"):
+        raise TelegramLiveError("Telegram polling returned a non-ok response")
+    results = payload.get("result") or []
+    if not results:
+        return None
+    update = results[0]
+    update_id = int(update.get("update_id"))
+    _set_poll_offset(store, update_id)
+    message = update.get("message") or {}
+    text = str(message.get("text") or "").strip()
+    chat_id = str((message.get("chat") or {}).get("id") or "")
+    if not text or not chat_id:
+        return None
+    return TelegramUpdate(chat_id=chat_id, text=text)
+
+
+def _send_telegram_message(config: TelegramConfig, *, chat_id: str, body: str) -> None:
+    token = config.bot_token
+    if not token:
+        raise TelegramLiveError("Telegram bot token is required")
+    data = parse.urlencode({"chat_id": chat_id, "text": body}).encode("utf-8")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    try:
+        with request.urlopen(url, data=data, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise TelegramLiveError(f"Telegram send failed safely: {type(exc).__name__}") from exc
+    if not payload.get("ok"):
+        raise TelegramLiveError("Telegram send returned a non-ok response")
+
+
+def _get_poll_offset(store: Store) -> int | None:
+    row = store.connection.execute(
+        "SELECT state_value FROM telegram_poll_state WHERE state_key = ?",
+        ("last_update_id",),
+    ).fetchone()
+    if not row:
+        return None
+    try:
+        return int(row["state_value"])
+    except (TypeError, ValueError):
+        return None
+
+
+def _set_poll_offset(store: Store, update_id: int) -> None:
+    store.connection.execute(
+        """
+        INSERT INTO telegram_poll_state (state_key, state_value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT (state_key) DO UPDATE SET
+            state_value = excluded.state_value,
+            updated_at = excluded.updated_at
+        """,
+        ("last_update_id", str(update_id), utc_iso()),
+    )
+    store.connection.commit()

@@ -239,6 +239,7 @@ The Synthetic Firm does not currently implement:
 - [Autonomous Scheduler](docs/the-synthetic-firm-autonomous-scheduler.md)
 - [Truthfulness Guard](docs/the-synthetic-firm-truthfulness-guard.md)
 - [Human Task Inbox](docs/the-synthetic-firm-human-task-inbox.md)
+- [Telegram Founder Inbox](docs/the-synthetic-firm-telegram-founder-inbox.md)
 - [Telegram Human Task Inbox](docs/the-synthetic-firm-telegram-human-task-inbox.md)
 - [Deployment Notes](docs/the-synthetic-firm-deployment-notes.md)
 - [Deployment Operations](docs/the-synthetic-firm-deployment-operations.md)

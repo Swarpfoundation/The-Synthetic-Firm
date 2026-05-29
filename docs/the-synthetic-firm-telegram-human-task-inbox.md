@@ -29,6 +29,10 @@ Reply commands:
 - `/blocked HUMAN_TASK_ID`
 - `/note HUMAN_TASK_ID MESSAGE`
 
+In Render live mode these are the only mutating Telegram commands allowed. They
+update HumanTasks and queue private FounderMessages for Atlas review; they do
+not run shell commands, deployments, provider auth, or public runtime controls.
+
 HumanTask notifications include only safe plain-English requests and public
 summaries. They must not include provider tokens, API keys, Telegram ids, raw
 prompts, raw audit metadata, private leads, private emails, or private repo

@@ -312,6 +312,11 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
             unknown_cost_count INTEGER NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS telegram_poll_state (
+            state_key TEXT PRIMARY KEY,
+            state_value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
         """
     )
     connection.commit()

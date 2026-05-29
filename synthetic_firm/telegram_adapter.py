@@ -43,6 +43,13 @@ SUPPORTED_COMMANDS = frozenset(
         "clarify",
         "constraint",
         "help",
+        "deploy",
+        "run",
+        "exec",
+        "shell",
+        "provider",
+        "auth",
+        "create_task",
     }
 )
 
@@ -97,6 +104,8 @@ def parse_telegram_command(text: str) -> TelegramCommand:
         )
     if command == "kill" and len(parts) == 2:
         return TelegramCommand(command=command, approval_id=parts[1].strip())
+    if command in {"deploy", "run", "exec", "shell", "provider", "auth", "create_task"}:
+        return TelegramCommand(command=command, message=" ".join(parts[1:]).strip() or None)
     if len(parts) != 1:
         raise TelegramAdapterError(f"/{command} does not accept arguments")
     return TelegramCommand(command=command)

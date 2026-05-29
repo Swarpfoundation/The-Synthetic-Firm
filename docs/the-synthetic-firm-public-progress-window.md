@@ -66,6 +66,10 @@ only each task's `public_summary` and status. Exact private instructions,
 founder notes, provider/account details, and any credential-like material remain
 out of the public export and API.
 
+Telegram FounderMessages are private Atlas inbox records. The public Progress
+Window may show only queued/reviewed/urgent counts, never raw message content,
+Telegram chat IDs, bot tokens, founder notes, or private HumanTask details.
+
 ## Autonomous Workday Status
 
 The public snapshot and API include autonomous workday status, Atlas report

@@ -49,7 +49,16 @@ def verify_postgres_migration_plan(plan: PostgresMigrationPlan | None = None) ->
     plan = plan or postgres_migration_plan()
     if plan.destructive:
         return False, "Postgres migration plan contains destructive SQL and is blocked."
-    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records", "cost_items", "cost_decisions"}
+    required = {
+        "tasks",
+        "audit_log",
+        "human_tasks",
+        "scheduler_runs",
+        "deployment_records",
+        "cost_items",
+        "cost_decisions",
+        "telegram_poll_state",
+    }
     present = {
         token.strip('"')
         for statement in plan.statements
@@ -126,7 +135,16 @@ def inspect_postgres_schema(database_url: str) -> dict[str, object]:
                     version = int(row["version"]) if row else 0
     except Exception as exc:  # noqa: BLE001
         return {"connected": False, "schemaReady": False, "summary": redact_db_text(f"Postgres schema check failed: {exc}")}
-    required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records", "cost_items", "cost_decisions"}
+    required = {
+        "tasks",
+        "audit_log",
+        "human_tasks",
+        "scheduler_runs",
+        "deployment_records",
+        "cost_items",
+        "cost_decisions",
+        "telegram_poll_state",
+    }
     missing = sorted(required - tables)
     ready = not missing and version >= POSTGRES_SCHEMA_VERSION
     return {
@@ -482,6 +500,13 @@ CREATE TABLE IF NOT EXISTS cost_decisions (
     projected_monthly_burn_eur DOUBLE PRECISION,
     unknown_cost_count INTEGER NOT NULL,
     created_at TEXT NOT NULL
+);
+""".strip()
+    yield """
+CREATE TABLE IF NOT EXISTS telegram_poll_state (
+    state_key TEXT PRIMARY KEY,
+    state_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
 """.strip()
     yield "CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);"
