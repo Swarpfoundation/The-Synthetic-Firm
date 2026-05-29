@@ -35,6 +35,8 @@ synthetic-firm --help
 synthetic-firm show-workday-status
 ```
 
+Windows users can use the PowerShell installer at `scripts/install.ps1`.
+
 Configure Kimi Code for The Synthetic Firm without putting secrets in repository
 files:
 

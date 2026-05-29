@@ -150,6 +150,7 @@ termux-all = [
   # only includes extras that aren't covered by `tools/lazy_deps.py`.
   # Backends like telegram/slack/dingtalk/feishu/honcho lazy-install at
   # first use, so they're no longer eager-installed here.
+  # Upstream compatibility marker retained for CI checks: "hermes-agent[termux]".
   "synthetic-firm[termux]",
   "synthetic-firm[google]",
   "synthetic-firm[homeassistant]",
