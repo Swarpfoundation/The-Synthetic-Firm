@@ -199,13 +199,14 @@ def _scheduler_snapshot(store: Store) -> dict[str, Any]:
         next_checkpoint = current.get("next_checkpoint")
     except Exception:
         next_checkpoint = None
+    workday_window = _workday_window_label()
     if not row:
         return {
             "status": "not_started",
             "lastCheckpointAt": None,
             "lastCheckpointType": None,
             "nextCheckpoint": next_checkpoint,
-            "workdayWindow": "10:00-16:00 Europe/Paris",
+            "workdayWindow": workday_window,
             "summary": "No autonomous scheduler checkpoint has run yet.",
         }
     return {
@@ -213,9 +214,17 @@ def _scheduler_snapshot(store: Store) -> dict[str, Any]:
         "lastCheckpointAt": row["ended_at"] or row["started_at"],
         "lastCheckpointType": row["checkpoint_type"],
         "nextCheckpoint": next_checkpoint,
-        "workdayWindow": "10:00-16:00 Europe/Paris",
+        "workdayWindow": workday_window,
         "summary": _safe(row["summary"], public=True),
     }
+
+
+def _workday_window_label() -> str:
+    try:
+        config = load_workday_config()
+        return f"{config.start.strftime('%H:%M')}-{config.end.strftime('%H:%M')} {config.timezone}"
+    except Exception:
+        return "09:00-16:00 Europe/Paris"
 
 
 def _storage_snapshot() -> dict[str, Any]:
@@ -323,7 +332,7 @@ def _latest_deployment_check_time(records: list[Any], credential_status: dict[st
 def _phase_from_time(time_text: str, inside_workday: bool) -> str:
     if not inside_workday:
         return "closed"
-    if time_text < "11:00":
+    if time_text < "10:00":
         return "planning"
     if time_text < "15:00":
         return "execution"

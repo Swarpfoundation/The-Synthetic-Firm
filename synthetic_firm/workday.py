@@ -69,7 +69,7 @@ def load_workday_config(path: str | Path = DEFAULT_WORKDAY_PATH) -> WorkdayConfi
     return WorkdayConfig(
         timezone=str(raw.get("timezone") or "Europe/Paris"),
         workdays=frozenset(_parse_workday(day) for day in workdays),
-        start=_parse_time(hours.get("start") or "10:00"),
+        start=_parse_time(hours.get("start") or "09:00"),
         end=_parse_time(hours.get("end") or "16:00"),
         company_daily_budget_usd=_optional_float(budget.get("daily_usd")),
         max_task_steps=_optional_int(limits.get("max_task_steps")),

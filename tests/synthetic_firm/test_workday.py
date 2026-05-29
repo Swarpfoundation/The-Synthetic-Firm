@@ -12,7 +12,7 @@ def test_workday_inside_europe_paris_hours():
 
     assert status.inside_work_hours is True
     assert status.timezone == "Europe/Paris"
-    assert config.start.hour == 10
+    assert config.start.hour == 9
     assert config.end.hour == 16
 
 

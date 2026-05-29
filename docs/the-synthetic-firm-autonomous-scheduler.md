@@ -13,14 +13,15 @@ Default schedule:
 
 - timezone: `Europe/Paris`
 - workdays: Monday-Friday
-- hours: `10:00-16:00`
+- hours: `09:00-16:00`
 
 Checkpoint cadence:
 
-- `10:00`: Atlas starts the workday
-- `11:00`: bounded workday cycle
-- `12:30`: bounded workday cycle
-- `14:00`: bounded workday cycle
+- `09:00`: Atlas starts the workday
+- `10:00`: bounded workday cycle
+- `11:30`: bounded workday cycle
+- `13:00`: bounded workday cycle
+- `14:30`: bounded workday cycle
 - `15:30`: Atlas public/private manager reports
 - `16:00`: close workday
 

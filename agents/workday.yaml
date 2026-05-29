@@ -7,7 +7,7 @@ workdays:
   - thursday
   - friday
 hours:
-  start: "10:00"
+  start: "09:00"
   end: "16:00"
 company_budget:
   daily_usd: 25.0

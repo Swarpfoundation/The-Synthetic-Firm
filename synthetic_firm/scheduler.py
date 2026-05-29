@@ -27,10 +27,11 @@ from synthetic_firm.time_utils import parse_utc_iso, utc_iso, utc_now
 from synthetic_firm.workday import WorkdayConfig, evaluate_workday, load_workday_config
 
 CHECKPOINT_SCHEDULE = (
-    ("10:00", "start_workday", "Atlas starts the autonomous workday."),
-    ("11:00", "cycle_1100", "Run one bounded autonomous workday cycle."),
-    ("12:30", "cycle_1230", "Run one bounded autonomous workday cycle."),
-    ("14:00", "cycle_1400", "Run one bounded autonomous workday cycle."),
+    ("09:00", "start_workday", "Atlas starts the autonomous workday."),
+    ("10:00", "cycle_1000", "Run one bounded autonomous workday cycle."),
+    ("11:30", "cycle_1130", "Run one bounded autonomous workday cycle."),
+    ("13:00", "cycle_1300", "Run one bounded autonomous workday cycle."),
+    ("14:30", "cycle_1430", "Run one bounded autonomous workday cycle."),
     ("15:30", "report_1530", "Generate Atlas manager reports from real persisted state."),
     ("16:00", "close_workday", "Close the autonomous workday."),
 )
@@ -665,7 +666,7 @@ def _checkpoint_for_time(local_now: datetime) -> tuple[str, str | None]:
         if minute >= scheduled_minute:
             due_checkpoint = checkpoint
     next_checkpoint = next((time_text for scheduled_minute, _checkpoint, time_text in schedule if minute < scheduled_minute), None)
-    if minute < _minutes("10:00"):
+    if minute < _minutes(CHECKPOINT_SCHEDULE[0][0]):
         return "none", next_checkpoint
     return due_checkpoint, next_checkpoint
 

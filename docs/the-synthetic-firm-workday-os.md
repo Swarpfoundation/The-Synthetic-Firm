@@ -18,7 +18,7 @@ The default workday configuration is `agents/workday.yaml`:
 
 - timezone: `Europe/Paris`
 - workdays: Monday through Friday
-- hours: `10:00-16:00`
+- hours: `09:00-16:00`
 
 Phase 2.5 keeps this as a schedule model. It does not start a background
 daemon.

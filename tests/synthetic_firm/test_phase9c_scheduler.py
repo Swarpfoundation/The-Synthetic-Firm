@@ -28,8 +28,8 @@ def test_scheduler_plan_uses_paris_workday():
     plan = scheduler_dry_run_plan(now=_dt(9, 30))
 
     assert plan["timezone"] == "Europe/Paris"
-    assert plan["hours"] == "10:00-16:00"
-    assert plan["checkpoints"][0]["time"] == "10:00"
+    assert plan["hours"] == "09:00-16:00"
+    assert plan["checkpoints"][0]["time"] == "09:00"
     assert plan["checkpoints"][-1]["time"] == "16:00"
 
 
@@ -37,9 +37,9 @@ def test_checkpoint_evaluation_windows_and_weekend(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
 
-    assert evaluate_checkpoint_now(_dt(9, 59), store=store).due is False
-    assert evaluate_checkpoint_now(_dt(10, 0), store=store).checkpoint_type == "start_workday"
-    assert evaluate_checkpoint_now(_dt(11, 0), store=store).checkpoint_type == "cycle_1100"
+    assert evaluate_checkpoint_now(_dt(8, 59), store=store).due is False
+    assert evaluate_checkpoint_now(_dt(9, 0), store=store).checkpoint_type == "start_workday"
+    assert evaluate_checkpoint_now(_dt(10, 0), store=store).checkpoint_type == "cycle_1000"
     assert evaluate_checkpoint_now(_dt(16, 0), store=store).checkpoint_type == "close_workday"
     assert evaluate_checkpoint_now(datetime(2026, 6, 6, 11, 0, tzinfo=PARIS), store=store).due is False
     store.close()
@@ -70,8 +70,8 @@ def test_checkpoint_starts_workday_and_blocks_repeat(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
 
-    first = run_checkpoint_once(store, now=_dt(10, 0))
-    second = run_checkpoint_once(store, now=_dt(10, 15))
+    first = run_checkpoint_once(store, now=_dt(9, 0))
+    second = run_checkpoint_once(store, now=_dt(9, 15))
 
     assert first["status"] == "completed"
     assert first["evaluation"]["checkpoint_type"] == "start_workday"
@@ -86,13 +86,13 @@ def test_checkpoint_runs_cycle_creates_human_task_notification(monkeypatch, tmp_
     monkeypatch.delenv("TSF_KIMI_CODE_API_KEY", raising=False)
     monkeypatch.delenv("TSF_KIMI_API_KEY", raising=False)
     store = Store()
-    run_checkpoint_once(store, now=_dt(10, 0))
+    run_checkpoint_once(store, now=_dt(9, 0))
 
-    result = run_checkpoint_once(store, now=_dt(11, 0))
+    result = run_checkpoint_once(store, now=_dt(10, 0))
     notifications = store.connection.execute("SELECT * FROM notification_queue").fetchall()
 
     assert result["status"] == "completed"
-    assert result["evaluation"]["checkpoint_type"] == "cycle_1100"
+    assert result["evaluation"]["checkpoint_type"] == "cycle_1000"
     assert store.list_human_tasks()
     assert notifications
     body = "\n".join(row["body"] for row in notifications)
@@ -125,12 +125,12 @@ def test_paused_and_killed_runtime_block_checkpoint(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
     store.set_runtime_status("paused")
-    paused = run_checkpoint_once(store, now=_dt(10, 0))
+    paused = run_checkpoint_once(store, now=_dt(9, 0))
     assert paused["status"] == "failed"
     assert "paused" in paused["summary"]
 
     store.set_runtime_status("killed")
-    killed = run_checkpoint_once(store, now=_dt(11, 0))
+    killed = run_checkpoint_once(store, now=_dt(10, 0))
     assert killed["status"] == "failed"
     assert "killed" in killed["summary"]
     store.close()
@@ -143,7 +143,7 @@ def test_failed_audit_verification_blocks_cycle(monkeypatch, tmp_path):
     store.connection.execute("UPDATE audit_log SET summary = 'tampered' WHERE sequence_number = 1")
     store.connection.commit()
 
-    result = run_checkpoint_once(store, now=_dt(11, 0))
+    result = run_checkpoint_once(store, now=_dt(10, 0))
 
     assert result["status"] == "failed"
     assert "Audit verification failed" in result["summary"]
@@ -153,12 +153,12 @@ def test_failed_audit_verification_blocks_cycle(monkeypatch, tmp_path):
 def test_public_snapshot_includes_scheduler_status(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
-    run_checkpoint_once(store, now=_dt(10, 0))
+    run_checkpoint_once(store, now=_dt(9, 0))
 
     snapshot = build_control_room_snapshot(store, audience="public")
 
     assert snapshot["scheduler"]["status"] in {"completed", "skipped", "failed"}
-    assert snapshot["scheduler"]["workdayWindow"] == "10:00-16:00 Europe/Paris"
+    assert snapshot["scheduler"]["workdayWindow"] == "09:00-16:00 Europe/Paris"
     assert "scheduler" in snapshot
     store.close()
 
@@ -169,7 +169,7 @@ def test_scheduler_internal_cli_status(monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
 
     assert main(["scheduler-dry-run-plan"]) == 0
-    assert "10:00-16:00" in capsys.readouterr().out
+    assert "09:00-16:00" in capsys.readouterr().out
 
     assert main(["scheduler-status"]) == 0
     assert "Autonomous scheduler status loaded" in capsys.readouterr().out

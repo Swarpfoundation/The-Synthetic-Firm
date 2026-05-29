@@ -51,7 +51,7 @@ The Workday OS models internal operations during business hours:
 
 - default timezone: `Europe/Paris`
 - default workdays: Monday through Friday
-- default hours: `10:00-16:00`
+- default hours: `09:00-16:00`
 - internal task state machine
 - local message bus
 - Telegram-ready approval request formatting
@@ -98,8 +98,8 @@ tooling.
 
 The internal scheduler runs bounded checkpoints during the Paris workday:
 
-- `10:00`: Atlas starts the day
-- `11:00`, `12:30`, `14:00`: bounded cycles
+- `09:00`: Atlas starts the day
+- `10:00`, `11:30`, `13:00`, `14:30`: bounded cycles
 - `15:30`: Atlas reports
 - `16:00`: close workday
 
