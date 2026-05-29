@@ -24,7 +24,7 @@ def test_founder_telegram_message_creates_queued_atlas_message(monkeypatch, tmp_
     response = handle_founder_telegram_text(store, "Please remember the pricing constraint.", chat_id="founder", config=_config())
     messages = store.list_founder_messages()
 
-    assert "queued for Atlas review" in response
+    assert "Recorded for Atlas" in response
     assert len(messages) == 1
     assert messages[0].target_agent == "atlas"
     assert messages[0].priority == "normal"

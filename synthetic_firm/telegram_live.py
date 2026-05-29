@@ -18,6 +18,7 @@ from synthetic_firm.approval_inbox import (
 )
 from synthetic_firm.budget_alerts import budget_warning
 from synthetic_firm.human_tasks import format_human_task_for_telegram
+from synthetic_firm.provider_auth_redaction import redact_auth_text
 from synthetic_firm.store import Store
 from synthetic_firm.telegram_adapter import TelegramCommand
 from synthetic_firm.time_utils import parse_utc_iso, utc_iso, utc_now
@@ -279,8 +280,42 @@ def handle_founder_telegram_text(
         from synthetic_firm.telegram_adapter import parse_telegram_command
 
         return handle_control_command(store, parse_telegram_command(stripped), chat_id=chat_id, config=cfg)
-    message = queue_founder_message(store, stripped)
-    return f"Founder message queued for Atlas review as {message.message_id}."
+    return handle_founder_plain_text(store, stripped, chat_id=chat_id, config=cfg)
+
+
+def handle_founder_plain_text(
+    store: Store,
+    text: str,
+    *,
+    chat_id: str,
+    config: TelegramConfig | None = None,
+) -> str:
+    cfg = config or load_telegram_config()
+    validate_chat(store, cfg, chat_id)
+    clean = redact_auth_text(text).strip()
+    lowered = clean.lower()
+    natural_command = _natural_command(lowered)
+    if natural_command:
+        return handle_control_command(store, TelegramCommand(command=natural_command), chat_id=chat_id, config=cfg)
+    task = _plain_text_human_task_target(store, clean)
+    if task is not None:
+        status = _plain_text_task_status(lowered)
+        updated = store.update_human_task(task.human_task_id, status=status, founder_note=clean)
+        queue_founder_message(
+            store,
+            f"Founder replied to {updated.human_task_id}: {clean}",
+            priority="normal",
+            message_type="note",
+            related_human_task_id=updated.human_task_id,
+            related_task_id=updated.related_task_id,
+        )
+        if status == "done":
+            return f"Recorded. I marked {updated.title} done and saved your note for Atlas."
+        if status == "blocked":
+            return f"Recorded. I marked {updated.title} blocked and saved your note for Atlas."
+        return f"Recorded your note for {updated.title}. Atlas will review it at the next checkpoint."
+    message = queue_founder_message(store, clean)
+    return f"Recorded for Atlas. Message id: {message.message_id}."
 
 
 def create_kill_confirmation(store: Store, chat_id: str) -> str:
@@ -397,17 +432,21 @@ def _approval_line(item: dict[str, object]) -> str:
 def _help_text() -> str:
     return "\n".join(
         [
-            "The Synthetic Firm founder human-task inbox:",
+            "The Synthetic Firm founder inbox accepts normal language.",
+            "",
+            "You can say:",
+            "- What happened today?",
+            "- What do they need from me?",
+            "- Neon costs 0 euros/month.",
+            "- Approved: use the configured research provider.",
+            "- Blocked: do not do outreach yet.",
+            "",
+            "Optional exact commands:",
             "/human_tasks",
             "/human_task HUMAN_TASK_ID",
             "/done HUMAN_TASK_ID",
             "/blocked HUMAN_TASK_ID",
             "/note HUMAN_TASK_ID MESSAGE",
-            "/urgent MESSAGE",
-            "/clarify MESSAGE",
-            "/constraint MESSAGE",
-            "",
-            "Read-only status commands:",
             "/status",
             "/report",
             "/help",
@@ -417,6 +456,102 @@ def _help_text() -> str:
 
 def _founder_inbox_live_mode(config: TelegramConfig) -> bool:
     return config.enabled and config.mode in {"polling", "bounded_polling"}
+
+
+def _natural_command(lowered: str) -> str | None:
+    normalized = " ".join(lowered.strip(" ?.!\t\r\n").split())
+    if normalized in {"status", "company status", "what is the status", "how are they doing"}:
+        return "status"
+    if normalized in {"report", "daily report", "what happened today", "what did they do today"}:
+        return "report"
+    if normalized in {
+        "tasks",
+        "human tasks",
+        "show tasks",
+        "show human tasks",
+        "what do you need",
+        "what do they need from me",
+    }:
+        return "human_tasks"
+    if normalized in {"help", "what can i say", "commands"}:
+        return "help"
+    return None
+
+
+def _plain_text_human_task_target(store: Store, text: str):
+    task_id = _extract_human_task_id(text)
+    if task_id:
+        try:
+            return store.get_human_task(task_id)
+        except Exception:  # noqa: BLE001
+            return None
+    lowered = text.lower()
+    pending = store.list_human_tasks(status="pending")
+    scored: list[tuple[int, object]] = []
+    for task in pending:
+        haystack = " ".join(
+            str(part or "").lower()
+            for part in (task.title, task.plain_english_request, task.reason, task.public_summary, task.requested_by_agent_id)
+        )
+        score = _human_task_match_score(lowered, haystack)
+        if score:
+            scored.append((score, task))
+    if not scored:
+        return None
+    scored.sort(key=lambda item: item[0], reverse=True)
+    if len(scored) > 1 and scored[0][0] == scored[1][0]:
+        return None
+    return scored[0][1]
+
+
+def _extract_human_task_id(text: str) -> str | None:
+    for raw in text.replace(":", " ").replace(",", " ").split():
+        cleaned = raw.strip().upper()
+        if cleaned.startswith("HT-") and len(cleaned) >= 12:
+            return cleaned
+    return None
+
+
+def _human_task_match_score(text: str, haystack: str) -> int:
+    groups = (
+        (("neon", "postgres", "database", "db"), ("neon", "postgres", "database", "durable storage")),
+        (("render", "backend", "api"), ("render", "backend", "api service")),
+        (("scheduler", "cron", "worker"), ("scheduler", "cron", "worker")),
+        (("vercel", "frontend", "progress window"), ("vercel", "frontend", "progress window")),
+        (("research", "scout", "source", "provider"), ("research", "scout", "source", "provider")),
+        (("growth", "pulse", "offer", "crm", "outreach", "leads"), ("growth", "pulse", "offer", "crm", "outreach", "leads")),
+    )
+    score = 0
+    for founder_words, task_words in groups:
+        founder_hits = sum(1 for word in founder_words if word in text)
+        task_hits = sum(1 for word in task_words if word in haystack)
+        if founder_hits and task_hits:
+            score += founder_hits + task_hits
+    return score
+
+
+def _plain_text_task_status(lowered: str) -> str | None:
+    block_words = ("blocked", "do not approve", "not approved", "cannot", "can't", "no outreach", "no source")
+    done_words = (
+        "approve",
+        "approved",
+        "confirm",
+        "confirmed",
+        "yes",
+        "provided",
+        "use ",
+        "free",
+        "eur",
+        "euro",
+        "€",
+        "monthly",
+        "per month",
+    )
+    if any(word in lowered for word in block_words):
+        return "blocked"
+    if any(word in lowered for word in done_words):
+        return "done"
+    return None
 
 
 def _fetch_telegram_update(store: Store, config: TelegramConfig) -> TelegramUpdate | None:

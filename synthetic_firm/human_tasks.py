@@ -118,10 +118,16 @@ def format_human_task_for_telegram(task: HumanTask) -> str:
         f"Deadline: {task.deadline or 'Not set'}",
         f"Public report note: {task.public_summary}",
         "",
-        "Reply:",
-        f"/done {task.human_task_id}",
-        f"/blocked {task.human_task_id}",
-        f"/note {task.human_task_id} <message>",
+        "You can reply in normal language.",
+        "Examples:",
+        "- Confirmed: this costs 0 euros/month.",
+        "- Approved: use the configured research provider.",
+        "- Blocked: do not do outreach yet.",
+        "",
+        "Optional exact commands:",
+        f"- /done {task.human_task_id}",
+        f"- /blocked {task.human_task_id}",
+        f"- /note {task.human_task_id} <message>",
     ]
     return "\n".join(lines)
 

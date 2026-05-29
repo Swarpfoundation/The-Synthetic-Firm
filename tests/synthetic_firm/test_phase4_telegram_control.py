@@ -11,6 +11,7 @@ from synthetic_firm.telegram_live import (
     confirm_kill,
     create_kill_confirmation,
     handle_control_command,
+    handle_founder_plain_text,
     load_telegram_config,
     poll_once,
     send_pending_notifications,
@@ -132,7 +133,7 @@ def test_poll_once_with_injected_allowed_update_queues_founder_message(monkeypat
 
     result = poll_once(store, config=config, fetch_update=lambda: TelegramUpdate(chat_id="123", text="Founder note"))
 
-    assert "queued for Atlas" in result
+    assert "Recorded for Atlas" in result
     assert store.list_founder_messages()[0].content == "Founder note"
     store.close()
 
@@ -156,6 +157,47 @@ def test_poll_once_live_fetch_sends_response_to_founder_chat(monkeypatch, tmp_pa
 
     assert "runtime is active" in result
     assert sent == [("123", result)]
+    store.close()
+
+
+def test_plain_english_can_list_human_tasks(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    task = store.create_human_task(
+        requested_by_agent_id="sentinel",
+        title="Confirm Neon Postgres monthly cost",
+        plain_english_request="Confirm the monthly cost for the Neon Postgres database.",
+        reason="TSF must track durable storage cost.",
+        public_summary="Database hosting cost needs founder confirmation.",
+    )
+    config = TelegramConfig(enabled=True, bot_token="token", allowed_chat_ids=frozenset({"123"}), mode="bounded_polling")
+
+    response = handle_founder_plain_text(store, "What do they need from me?", chat_id="123", config=config)
+
+    assert task.human_task_id in response
+    assert "Database hosting cost" in response
+    store.close()
+
+
+def test_plain_english_cost_confirmation_updates_matching_human_task(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    task = store.create_human_task(
+        requested_by_agent_id="sentinel",
+        title="Confirm Neon Postgres monthly cost",
+        plain_english_request="Confirm the monthly cost for the Neon Postgres database.",
+        reason="TSF must track durable storage cost.",
+        public_summary="Database hosting cost needs founder confirmation.",
+    )
+    config = TelegramConfig(enabled=True, bot_token="token", allowed_chat_ids=frozenset({"123"}), mode="bounded_polling")
+
+    response = handle_founder_plain_text(store, "Neon Postgres is 0 euros per month.", chat_id="123", config=config)
+    updated = store.get_human_task(task.human_task_id)
+
+    assert "marked" in response
+    assert updated.status == "done"
+    assert updated.founder_note == "Neon Postgres is 0 euros per month."
+    assert store.list_founder_messages()[0].related_human_task_id == task.human_task_id
     store.close()
 
 
