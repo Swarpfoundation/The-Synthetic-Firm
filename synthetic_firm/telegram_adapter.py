@@ -42,6 +42,7 @@ SUPPORTED_COMMANDS = frozenset(
         "urgent",
         "clarify",
         "constraint",
+        "start",
         "help",
         "deploy",
         "run",
@@ -102,6 +103,8 @@ def parse_telegram_command(text: str) -> TelegramCommand:
             message=" ".join(parts[1:]).strip(),
             message_type="new_constraint",
         )
+    if command == "start":
+        command = "help"
     if command == "kill" and len(parts) == 2:
         return TelegramCommand(command=command, approval_id=parts[1].strip())
     if command in {"deploy", "run", "exec", "shell", "provider", "auth", "create_task"}:

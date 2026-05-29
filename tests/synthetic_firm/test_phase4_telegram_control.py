@@ -64,6 +64,12 @@ def test_allowed_chat_id_accepts_status(monkeypatch, tmp_path):
     store.close()
 
 
+def test_start_command_is_safe_help_alias():
+    parsed = parse_telegram_command("/start")
+
+    assert parsed.command == "help"
+
+
 def test_pause_resume_and_two_step_kill(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
