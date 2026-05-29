@@ -331,12 +331,16 @@ def poll_once(
     if cfg.mode == "dry_run":
         return "Dry-run polling cycle completed without network access."
     cfg.require_live_ready()
+    live_fetch = fetch_update is None
     if fetch_update is None:
         fetch_update = lambda: _fetch_telegram_update(store, cfg)
     update = fetch_update()
     if update is None:
         return "No Telegram command received."
-    return handle_founder_telegram_text(store, update.text, chat_id=update.chat_id, config=cfg)
+    response = handle_founder_telegram_text(store, update.text, chat_id=update.chat_id, config=cfg)
+    if live_fetch:
+        _send_telegram_response(cfg, chat_id=update.chat_id, body=response)
+    return response
 
 
 def send_pending_notifications(
@@ -462,6 +466,40 @@ def _send_telegram_message(config: TelegramConfig, *, chat_id: str, body: str) -
         raise TelegramLiveError(f"Telegram send failed safely: {type(exc).__name__}") from exc
     if not payload.get("ok"):
         raise TelegramLiveError("Telegram send returned a non-ok response")
+
+
+def _send_telegram_response(config: TelegramConfig, *, chat_id: str, body: str) -> None:
+    text = str(body or "").strip()
+    if not text:
+        return
+    for chunk in _telegram_chunks(text):
+        _send_telegram_message(config, chat_id=chat_id, body=chunk)
+
+
+def _telegram_chunks(text: str, *, limit: int = 3500) -> list[str]:
+    if len(text) <= limit:
+        return [text]
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for line in text.splitlines():
+        line_len = len(line) + 1
+        if current and current_len + line_len > limit:
+            chunks.append("\n".join(current))
+            current = []
+            current_len = 0
+        if line_len > limit:
+            if current:
+                chunks.append("\n".join(current))
+                current = []
+                current_len = 0
+            chunks.extend(line[i : i + limit] for i in range(0, len(line), limit))
+            continue
+        current.append(line)
+        current_len += line_len
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
 
 
 def _get_poll_offset(store: Store) -> int | None:

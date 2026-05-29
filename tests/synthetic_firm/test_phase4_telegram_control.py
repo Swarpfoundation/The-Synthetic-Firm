@@ -137,6 +137,28 @@ def test_poll_once_with_injected_allowed_update_queues_founder_message(monkeypat
     store.close()
 
 
+def test_poll_once_live_fetch_sends_response_to_founder_chat(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    sent: list[tuple[str, str]] = []
+    config = TelegramConfig(enabled=True, bot_token="token", allowed_chat_ids=frozenset({"123"}), mode="bounded_polling")
+
+    monkeypatch.setattr(
+        "synthetic_firm.telegram_live._fetch_telegram_update",
+        lambda store, config: TelegramUpdate(chat_id="123", text="/status"),
+    )
+    monkeypatch.setattr(
+        "synthetic_firm.telegram_live._send_telegram_message",
+        lambda config, *, chat_id, body: sent.append((chat_id, body)),
+    )
+
+    result = poll_once(store, config=config)
+
+    assert "runtime is active" in result
+    assert sent == [("123", result)]
+    store.close()
+
+
 def test_send_pending_notifications_dry_run_marks_without_network(monkeypatch, tmp_path):
     monkeypatch.setenv("TSF_HOME", str(tmp_path))
     store = Store()
