@@ -41,6 +41,7 @@ def test_postgres_sql_translation_keeps_parameterized_commands():
     assert translate_sql("SELECT * FROM tasks WHERE task_id = ?") == "SELECT * FROM tasks WHERE task_id = %s"
     assert "ON CONFLICT (task_id)" in translate_sql("REPLACE INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
     assert "created_at::date = CURRENT_DATE" in translate_sql("SELECT * FROM budget_usage WHERE date(created_at) = date('now')")
+    assert "workday_date = CURRENT_DATE::text" in translate_sql("SELECT * FROM workdays WHERE workday_date = date('now')")
     assert translate_sql("BEGIN IMMEDIATE") == "BEGIN"
     assert "information_schema.tables" in translate_sql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
 

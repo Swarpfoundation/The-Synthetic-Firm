@@ -97,6 +97,7 @@ def translate_sql(sql: str) -> str:
         text = _task_upsert_sql()
     text = text.replace("date(created_at) = date('now')", "created_at::date = CURRENT_DATE")
     text = text.replace("date(started_at) = date('now')", "started_at::date = CURRENT_DATE")
+    text = text.replace("workday_date = date('now')", "workday_date = CURRENT_DATE::text")
     text = re.sub(r"\bCOALESCE\(\?,\s*([A-Za-z_]+)\)", r"COALESCE(%s, \1)", text)
     return text
 
