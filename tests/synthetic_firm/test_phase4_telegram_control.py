@@ -153,6 +153,40 @@ def test_send_pending_notifications_dry_run_marks_without_network(monkeypatch, t
     store.close()
 
 
+def test_send_pending_notifications_live_can_requeue_dry_run_sent_human_tasks(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    monkeypatch.setattr("synthetic_firm.telegram_live._send_telegram_message", lambda *args, **kwargs: None)
+    store = Store()
+    store.connection.execute(
+        "INSERT INTO notification_queue VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            "note_test",
+            "human_task",
+            None,
+            "Safe notification",
+            "dry_run_sent",
+            1,
+            "2026-01-01T00:00:00+00:00",
+            "2026-01-01T00:00:01+00:00",
+        ),
+    )
+    store.connection.commit()
+
+    result = send_pending_notifications(
+        store,
+        config=TelegramConfig(True, "token", frozenset({"123"}), "bounded_polling"),
+        live=True,
+        retry_dry_run_sent=True,
+    )
+
+    row = store.connection.execute("SELECT status, dry_run FROM notification_queue WHERE notification_id = ?", ("note_test",)).fetchone()
+    assert result["sent"] == 1
+    assert result["retriedDryRunSent"] == 1
+    assert row["status"] == "sent"
+    assert row["dry_run"] == 0
+    store.close()
+
+
 def test_telegram_founder_smoke_reports_no_secret_values():
     config = TelegramConfig(enabled=True, bot_token="secret-token-value", allowed_chat_ids=frozenset({"123"}), mode="bounded_polling")
 

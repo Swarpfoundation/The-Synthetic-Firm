@@ -344,6 +344,7 @@ def send_pending_notifications(
     *,
     config: TelegramConfig | None = None,
     live: bool = False,
+    retry_dry_run_sent: bool = False,
 ) -> dict[str, object]:
     from synthetic_firm.notification_queue import send_notifications
 
@@ -352,13 +353,22 @@ def send_pending_notifications(
         sent = send_notifications(store, dry_run=True, config=cfg)
         return {"sent": len(sent), "live": False, "summary": "Dry-run Telegram notifications marked safely."}
     cfg.require_live_ready()
+    retried = 0
+    if retry_dry_run_sent:
+        retried = _requeue_dry_run_human_task_notifications(store)
     sent = send_notifications(
         store,
         dry_run=False,
         config=cfg,
         sender=lambda chat_id, body: _send_telegram_message(cfg, chat_id=chat_id, body=body),
+        include_dry_run_notifications=True,
     )
-    return {"sent": len(sent), "live": True, "summary": "Pending Telegram notifications sent."}
+    return {
+        "sent": len(sent),
+        "retriedDryRunSent": retried,
+        "live": True,
+        "summary": "Pending Telegram notifications sent.",
+    }
 
 
 def telegram_founder_smoke(*, config: TelegramConfig | None = None, live: bool = False) -> dict[str, object]:
@@ -479,3 +489,23 @@ def _set_poll_offset(store: Store, update_id: int) -> None:
         ("last_update_id", str(update_id), utc_iso()),
     )
     store.connection.commit()
+
+
+def _requeue_dry_run_human_task_notifications(store: Store) -> int:
+    rows = store.connection.execute(
+        """
+        SELECT notification_id
+        FROM notification_queue
+        WHERE status = ?
+          AND dry_run = 1
+          AND notification_type IN (?, ?)
+        """,
+        ("dry_run_sent", "human_task", "provider_blocker"),
+    ).fetchall()
+    for row in rows:
+        store.connection.execute(
+            "UPDATE notification_queue SET status = ?, dry_run = 0, sent_at = NULL WHERE notification_id = ?",
+            ("queued", row["notification_id"]),
+        )
+    store.connection.commit()
+    return len(rows)

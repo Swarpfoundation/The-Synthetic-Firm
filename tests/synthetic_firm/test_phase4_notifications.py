@@ -44,6 +44,31 @@ def test_live_send_is_mocked_and_token_not_stored(monkeypatch, tmp_path):
     store.close()
 
 
+def test_live_send_can_retry_dry_run_human_task_notification(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    enqueue_notification(store, notification_type="human_task", body="Safe HumanTask notification.", dry_run=True)
+    calls: list[tuple[str, str]] = []
+    config = TelegramConfig(
+        enabled=True,
+        bot_token="sensitive-bot-token",
+        allowed_chat_ids=frozenset({"123"}),
+        mode="bounded_polling",
+    )
+
+    sent = send_notifications(
+        store,
+        dry_run=False,
+        config=config,
+        sender=lambda chat, body: calls.append((chat, body)),
+        include_dry_run_notifications=True,
+    )
+
+    assert sent[0].status == "sent"
+    assert calls == [("123", "Safe HumanTask notification.")]
+    store.close()
+
+
 def test_budget_warning_thresholds():
     assert "50%" in budget_warning(5.0, 10.0)
     assert "80%" in budget_warning(8.0, 10.0)

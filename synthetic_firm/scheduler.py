@@ -388,9 +388,26 @@ def enqueue_new_human_task_notifications(
             break
         body = format_human_task_for_telegram(task)
         note_type = "provider_blocker" if "provider" in f"{task.title} {task.public_summary}".lower() else "human_task"
-        notification = enqueue_notification(store, notification_type=note_type, body=body, dry_run=True)
+        notification = enqueue_notification(
+            store,
+            notification_type=note_type,
+            body=body,
+            dry_run=not _telegram_live_notifications_enabled(),
+        )
         queued.append(notification.notification_id)
     return queued
+
+
+def _telegram_live_notifications_enabled() -> bool:
+    from synthetic_firm.telegram_live import load_telegram_config
+
+    config = load_telegram_config()
+    return (
+        config.enabled
+        and bool(config.bot_token)
+        and bool(config.allowed_chat_ids)
+        and config.mode in {"polling", "bounded_polling"}
+    )
 
 
 def _execute_checkpoint(store: Store, evaluation: SchedulerEvaluation) -> dict[str, Any]:

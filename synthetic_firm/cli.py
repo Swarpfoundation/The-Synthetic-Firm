@@ -436,6 +436,7 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
         help="Internal/dev: send or dry-run queued Telegram notifications",
     )
     send_pending.add_argument("--live", action="store_true")
+    send_pending.add_argument("--retry-dry-run-sent", action="store_true")
     founder_smoke = sub.add_parser("telegram-founder-smoke", help="Internal/dev: validate Telegram Founder Inbox")
     founder_smoke.add_argument("--dry-run", action="store_true")
     founder_smoke.add_argument("--live", action="store_true")
@@ -1012,7 +1013,7 @@ def _main_orchestrator(argv: list[str]) -> int:
         return 0
     if args.command == "telegram-send-pending-notifications":
         store = Store()
-        _print_json(send_pending_notifications(store, live=args.live))
+        _print_json(send_pending_notifications(store, live=args.live, retry_dry_run_sent=args.retry_dry_run_sent))
         store.close()
         return 0
     if args.command == "telegram-founder-smoke":

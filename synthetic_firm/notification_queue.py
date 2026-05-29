@@ -90,12 +90,13 @@ def send_notifications(
     dry_run: bool = True,
     config: TelegramConfig | None = None,
     sender: Callable[[str, str], None] | None = None,
+    include_dry_run_notifications: bool = False,
 ) -> list[Notification]:
     sent: list[Notification] = []
     for notification in list_notifications(store):
         if notification.status != "queued":
             continue
-        if dry_run or notification.dry_run:
+        if dry_run or (notification.dry_run and not include_dry_run_notifications):
             _mark(store, notification, "dry_run_sent")
             sent.append(get_notification(store, notification.notification_id))
             continue
