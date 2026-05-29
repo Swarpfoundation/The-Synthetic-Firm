@@ -317,6 +317,29 @@ def initialize_schema(connection: sqlite3.Connection) -> None:
             state_value TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS code_change_proposals (
+            proposal_id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            rationale TEXT NOT NULL,
+            patch_text TEXT NOT NULL,
+            target_branch TEXT NOT NULL,
+            base_branch TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_by_agent_id TEXT NOT NULL,
+            reviewed_by_atlas INTEGER NOT NULL,
+            reviewed_by_sentinel INTEGER NOT NULL,
+            tests_command TEXT NOT NULL,
+            test_status TEXT,
+            test_summary TEXT,
+            commit_sha TEXT,
+            pushed_branch TEXT,
+            public_summary TEXT NOT NULL,
+            private_notes_redacted TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            applied_at TEXT
+        );
         """
     )
     connection.commit()

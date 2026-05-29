@@ -15,6 +15,7 @@ from synthetic_firm.agent_reasoning import (
     validate_reasoning_output,
 )
 from synthetic_firm.budget import BudgetPolicy
+from synthetic_firm.code_change import CodeChangeError, create_code_change_proposal
 from synthetic_firm.llm_client import complete_agent_reasoning
 from synthetic_firm.model_provider import resolve_model_provider
 from synthetic_firm.provider_auth_adapters import provider_auth_status
@@ -773,6 +774,51 @@ def _persist_reasoning_output(store: Store, *, agent_id: str, workday: WorkdaySt
                 target_id=human_task.human_task_id,
                 risk_level=human_task.risk_level,
                 summary=human_task.public_summary,
+            )
+    if agent_id == "forge":
+        _persist_forge_code_proposals(store, workday=workday, output=output)
+
+
+def _persist_forge_code_proposals(store: Store, *, workday: WorkdayState, output: dict[str, Any]) -> None:
+    for item in output.get("proposed_tasks", [])[:2]:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("type") or item.get("kind") or "").strip().lower()
+        if kind not in {"code_change", "patch", "repo_patch"}:
+            continue
+        patch_text = str(item.get("patch_text") or item.get("patch") or "").strip()
+        if not patch_text:
+            continue
+        try:
+            proposal = create_code_change_proposal(
+                store,
+                title=str(item.get("title") or "Forge code-change proposal"),
+                summary=str(item.get("summary") or "Forge proposed a bounded code change."),
+                rationale=str(item.get("rationale") or "Forge identified repo work from persisted runtime state."),
+                patch_text=patch_text,
+                created_by_agent_id="forge",
+                tests_command=str(item.get("tests_command") or ""),
+                public_summary=str(item.get("public_summary") or "Forge proposed a code change for review."),
+                private_notes=f"Workday: {workday.workday_id}",
+            )
+            store.append_audit(
+                actor_type="agent",
+                actor_id="forge",
+                action="code_change_from_model_reasoning",
+                target_type="code_change_proposal",
+                target_id=proposal.proposal_id,
+                risk_level="medium",
+                summary=proposal.public_summary,
+            )
+        except CodeChangeError as exc:
+            store.append_audit(
+                actor_type="agent",
+                actor_id="forge",
+                action="code_change_proposal_blocked",
+                target_type="workday",
+                target_id=workday.workday_id,
+                risk_level="medium",
+                summary=redact_auth_text(str(exc)),
             )
 
 

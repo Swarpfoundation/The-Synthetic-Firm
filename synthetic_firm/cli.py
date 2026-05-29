@@ -9,6 +9,7 @@ import subprocess
 import sys
 from dataclasses import asdict
 from datetime import date
+from pathlib import Path
 
 from synthetic_firm.agent_registry import AgentRegistry
 from synthetic_firm.autonomous_workday import (
@@ -36,6 +37,14 @@ from synthetic_firm.approval_signing import default_expiry, sign_approval_decisi
 from synthetic_firm.budget import BudgetPolicy, BudgetUsage, budget_status_text, evaluate_budget
 from synthetic_firm.budget_gate import check_budget_gate
 from synthetic_firm.budget_log import append_budget_log
+from synthetic_firm.code_change import (
+    apply_code_change_proposal,
+    code_change_public_summary,
+    create_code_change_proposal,
+    internally_review_code_change_proposal,
+    list_code_change_proposals,
+    proposal_to_dict as code_proposal_to_dict,
+)
 from synthetic_firm.control_room_export import export_control_room_state
 from synthetic_firm.control_room_api import serve_control_room_api
 from synthetic_firm.cost_ledger import (
@@ -195,6 +204,11 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "budget-check-action",
         "budget-create-confirmation-tasks",
         "budget-public-summary",
+        "code-proposal-create",
+        "code-proposal-list",
+        "code-proposal-review",
+        "code-proposal-apply",
+        "code-proposal-public-summary",
         "telegram-status",
         "telegram-founder-status",
         "telegram-dry-run-command",
@@ -424,6 +438,29 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     budget_check.add_argument("--unknown-cost-possible", action="store_true")
     sub.add_parser("budget-create-confirmation-tasks", help="Internal/dev: create infrastructure cost confirmation HumanTasks")
     sub.add_parser("budget-public-summary", help="Internal/dev: show public-safe infrastructure budget summary")
+
+    code_create = sub.add_parser("code-proposal-create", help="Internal/dev: create a Forge code-change proposal")
+    code_create.add_argument("--title", required=True)
+    code_create.add_argument("--summary", required=True)
+    code_create.add_argument("--rationale", required=True)
+    code_create.add_argument("--patch-file", required=True)
+    code_create.add_argument("--created-by", default="forge")
+    code_create.add_argument("--target-branch")
+    code_create.add_argument("--base-branch", default="main")
+    code_create.add_argument("--tests-command")
+    code_create.add_argument("--public-summary")
+    code_list = sub.add_parser("code-proposal-list", help="Internal/dev: list Forge code-change proposals")
+    code_list.add_argument("--status")
+    code_list.add_argument("--limit", type=int, default=20)
+    code_review = sub.add_parser("code-proposal-review", help="Internal/dev: run internal safety review for a code proposal")
+    code_review.add_argument("proposal_id")
+    code_apply = sub.add_parser("code-proposal-apply", help="Internal/dev: apply, test, commit, and optionally push an approved code proposal")
+    code_apply.add_argument("proposal_id")
+    code_apply.add_argument("--repo-path", default=".")
+    code_apply.add_argument("--tests-command")
+    code_apply.add_argument("--live", action="store_true")
+    code_apply.add_argument("--push", action="store_true")
+    sub.add_parser("code-proposal-public-summary", help="Internal/dev: show public-safe Forge code proposal summary")
 
     sub.add_parser("telegram-status", help="Show Telegram founder-interface configuration status")
     sub.add_parser("telegram-founder-status", help="Internal/dev: show Telegram Founder Inbox readiness")
@@ -843,6 +880,54 @@ def _main_orchestrator(argv: list[str]) -> int:
     if args.command == "budget-public-summary":
         store = Store()
         _print_json(budget_public_summary(store))
+        store.close()
+        return 0
+    if args.command == "code-proposal-create":
+        store = Store()
+        patch_text = Path(args.patch_file).read_text(encoding="utf-8")
+        proposal = create_code_change_proposal(
+            store,
+            title=args.title,
+            summary=args.summary,
+            rationale=args.rationale,
+            patch_text=patch_text,
+            created_by_agent_id=args.created_by,
+            target_branch=args.target_branch,
+            base_branch=args.base_branch,
+            tests_command=args.tests_command,
+            public_summary=args.public_summary,
+        )
+        _print_json({"summary": "Forge code-change proposal created.", "proposal": code_proposal_to_dict(proposal)})
+        store.close()
+        return 0
+    if args.command == "code-proposal-list":
+        store = Store()
+        proposals = list_code_change_proposals(store, status=args.status, limit=args.limit)
+        _print_json({"proposals": [code_proposal_to_dict(proposal) for proposal in proposals]})
+        store.close()
+        return 0
+    if args.command == "code-proposal-review":
+        store = Store()
+        proposal = internally_review_code_change_proposal(store, args.proposal_id)
+        _print_json({"summary": "Atlas and Sentinel approved code-change proposal internally.", "proposal": code_proposal_to_dict(proposal)})
+        store.close()
+        return 0
+    if args.command == "code-proposal-apply":
+        store = Store()
+        result = apply_code_change_proposal(
+            store,
+            args.proposal_id,
+            repo_path=args.repo_path,
+            live=args.live,
+            push=args.push,
+            tests_command=args.tests_command,
+        )
+        _print_json(result)
+        store.close()
+        return 0
+    if args.command == "code-proposal-public-summary":
+        store = Store()
+        _print_json(code_change_public_summary(store))
         store.close()
         return 0
     if args.command == "create-task":

@@ -58,6 +58,7 @@ def verify_postgres_migration_plan(plan: PostgresMigrationPlan | None = None) ->
         "cost_items",
         "cost_decisions",
         "telegram_poll_state",
+        "code_change_proposals",
     }
     present = {
         token.strip('"')
@@ -144,6 +145,7 @@ def inspect_postgres_schema(database_url: str) -> dict[str, object]:
         "cost_items",
         "cost_decisions",
         "telegram_poll_state",
+        "code_change_proposals",
     }
     missing = sorted(required - tables)
     ready = not missing and version >= POSTGRES_SCHEMA_VERSION
@@ -509,6 +511,31 @@ CREATE TABLE IF NOT EXISTS telegram_poll_state (
     updated_at TEXT NOT NULL
 );
 """.strip()
+    yield """
+CREATE TABLE IF NOT EXISTS code_change_proposals (
+    proposal_id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    patch_text TEXT NOT NULL,
+    target_branch TEXT NOT NULL,
+    base_branch TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_by_agent_id TEXT NOT NULL,
+    reviewed_by_atlas INTEGER NOT NULL,
+    reviewed_by_sentinel INTEGER NOT NULL,
+    tests_command TEXT NOT NULL,
+    test_status TEXT,
+    test_summary TEXT,
+    commit_sha TEXT,
+    pushed_branch TEXT,
+    public_summary TEXT NOT NULL,
+    private_notes_redacted TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    applied_at TEXT
+);
+""".strip()
     yield "CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);"
     yield "CREATE INDEX IF NOT EXISTS idx_tasks_agent ON tasks(assigned_agent_id);"
     yield "CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);"
@@ -517,6 +544,7 @@ CREATE TABLE IF NOT EXISTS telegram_poll_state (
     yield "CREATE INDEX IF NOT EXISTS idx_scheduler_runs_started ON scheduler_runs(started_at);"
     yield "CREATE INDEX IF NOT EXISTS idx_deployment_records_updated ON deployment_records(updated_at);"
     yield "CREATE INDEX IF NOT EXISTS idx_cost_items_month ON cost_items(month);"
+    yield "CREATE INDEX IF NOT EXISTS idx_code_change_status ON code_change_proposals(status);"
     yield f"INSERT INTO schema_migrations (version, applied_at) VALUES ({POSTGRES_SCHEMA_VERSION}, now()::text) ON CONFLICT (version) DO NOTHING;"
     yield "INSERT INTO runtime_status (singleton_id, status, updated_at) VALUES (1, 'active', now()::text) ON CONFLICT (singleton_id) DO NOTHING;"
 

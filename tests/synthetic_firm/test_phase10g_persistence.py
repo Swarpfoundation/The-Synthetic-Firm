@@ -74,6 +74,7 @@ def test_postgres_migration_plan_is_non_destructive_and_idempotent():
     assert "create table if not exists human_tasks" in sql
     assert "create table if not exists scheduler_runs" in sql
     assert "create table if not exists deployment_records" in sql
+    assert "create table if not exists code_change_proposals" in sql
     for forbidden in ("drop table", "truncate", "delete from", "alter table"):
         assert forbidden not in sql
 

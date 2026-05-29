@@ -157,7 +157,7 @@ def db_verify(env: Mapping[str, str] | None = None) -> dict[str, Any]:
         store = Store()
         try:
             tables = set(store.status()["tables"])
-            required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records"}
+            required = {"tasks", "audit_log", "human_tasks", "scheduler_runs", "deployment_records", "code_change_proposals"}
             missing = sorted(required - tables)
             return {
                 "backend": "sqlite",

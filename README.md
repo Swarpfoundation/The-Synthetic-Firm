@@ -242,6 +242,7 @@ auditable. Production deployment remains separately blocked.
 - [Public Progress Window](docs/the-synthetic-firm-public-progress-window.md)
 - [Autonomous Workday Engine](docs/the-synthetic-firm-autonomous-workday-engine.md)
 - [Autonomous Scheduler](docs/the-synthetic-firm-autonomous-scheduler.md)
+- [Forge Patch Pipeline](docs/the-synthetic-firm-forge-patch-pipeline.md)
 - [Truthfulness Guard](docs/the-synthetic-firm-truthfulness-guard.md)
 - [Human Task Inbox](docs/the-synthetic-firm-human-task-inbox.md)
 - [Telegram Founder Inbox](docs/the-synthetic-firm-telegram-founder-inbox.md)

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from synthetic_firm.agent_registry import AgentProfile, AgentRegistry
+from synthetic_firm.code_change import code_change_public_summary
 from synthetic_firm.cost_ledger import budget_private_report, budget_public_summary
 from synthetic_firm.deployment import deployment_record_to_dict, latest_credential_status_records, list_deployment_records
 from synthetic_firm.execution_queue import list_queue
@@ -100,6 +101,7 @@ def build_control_room_snapshot(store: Store | None = None, *, audience: str = "
             "lastAtlasReportAt": _last_atlas_report_at(reports),
             "publicEmptyStateReason": _public_empty_state_reason(tasks, human_tasks, public_reports),
             "deploymentSummary": _deployment_summary(store),
+            "codeChangeSummary": _code_change_summary(store),
             "agents": _agents_snapshot(registry, tasks, approvals),
             "tasks": [_task_snapshot(task, audience=audience) for task in tasks],
             "messages": _messages_summary(messages, audience=audience),
@@ -295,6 +297,17 @@ def _deployment_summary(store: Store) -> dict[str, Any]:
         "summary": _safe(latest.public_summary, public=True) if latest else "No public deployment activity yet.",
         "history": [deployment_record_to_dict(record, public=True) for record in records],
     }
+
+
+def _code_change_summary(store: Store) -> dict[str, Any]:
+    try:
+        return _sanitize_mapping(code_change_public_summary(store), public=True)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "statusCounts": {},
+            "recent": [],
+            "summary": _safe(f"Forge code-change tracking needs setup: {exc}", public=True),
+        }
 
 
 def _infrastructure_budget_snapshot(store: Store, *, audience: str) -> dict[str, Any]:
