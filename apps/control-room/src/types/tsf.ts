@@ -207,5 +207,10 @@ export interface TsfState {
     workdayWindow: string | null;
     deploymentState: string | null;
     deploymentSummary: string | null;
+    storeBackendPublicStatus: string | null;
+    storageSummary: string | null;
+    repositoryMode: string | null;
+    lastAtlasReportAt: string | null;
+    publicEmptyStateReason: string | null;
   };
 }

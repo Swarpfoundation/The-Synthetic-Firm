@@ -20,11 +20,29 @@ SQLite is acceptable for local/dev. Serious production should migrate TSF state
 to Postgres or another durable database before relying on the runtime. Do not
 depend on an ephemeral filesystem for company state.
 
+Phase 10G adds the Postgres persistence foundation:
+
+- explicit `TSF_STORE_BACKEND=postgres`
+- `DATABASE_URL`/`TSF_DATABASE_URL` redaction
+- non-destructive Postgres migration dry-runs
+- Render API and scheduler readiness checks
+- a safe `render.yaml` starter blueprint with no committed secrets
+
+Database credentials belong only in Render environment variables.
+
 ## Scheduler
 
 Use checkpoint-once mode from a scheduled job where possible. It exits after one
 safe checkpoint and uses persisted locks to avoid overlaps. Local loop mode is
 only for internal development and must be bounded by runtime/checkpoint limits.
+
+For Render, start with a cron job that runs:
+
+```bash
+synthetic-firm scheduler-checkpoint-once
+```
+
+Do not run the bounded local scheduler loop as a deployed daemon in this phase.
 
 ## Still Disabled
 

@@ -107,6 +107,16 @@ Recommended later deployment shape:
 - Backend: Render web service running the read-only API/SSE server
 - `VITE_TSF_API_BASE_URL`: points the frontend to the Render API
 
-SQLite is acceptable for local development. Production should move persistent
-runtime state to Postgres or another durable store in a later phase. Do not rely
-on an ephemeral filesystem for production company state.
+SQLite is acceptable for local development. Render-hosted API/scheduler
+operation should use shared Postgres state so Atlas reports, HumanTasks,
+scheduler checkpoints, and audit entries survive deploys and are visible to both
+the API service and checkpoint job.
+
+The public snapshot may expose only sanitized storage status:
+
+- `sqlite_preview`
+- `postgres_ready`
+- `postgres_unavailable`
+
+It must not expose database URLs, usernames, hosts, passwords, service IDs, raw
+database errors, or internal schema details.

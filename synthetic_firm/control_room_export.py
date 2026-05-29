@@ -14,6 +14,7 @@ from synthetic_firm.founder_messages import founder_message_to_dict
 from synthetic_firm.human_tasks import human_task_to_dict
 from synthetic_firm.provider_auth_redaction import redact_auth_text
 from synthetic_firm.store import Store
+from synthetic_firm.store_backend import db_status
 from synthetic_firm.time_utils import utc_iso
 from synthetic_firm.workday import evaluate_workday, load_workday_config
 
@@ -91,6 +92,12 @@ def build_control_room_snapshot(store: Store | None = None, *, audience: str = "
             "workday": workday,
             "autonomousWorkday": autonomous_workday,
             "scheduler": _scheduler_snapshot(store),
+            "storage": _storage_snapshot(),
+            "storeBackendPublicStatus": _storage_snapshot()["storeBackendPublicStatus"],
+            "schedulerPublicStatus": _scheduler_public_status(store),
+            "lastSchedulerCheckpoint": _last_scheduler_checkpoint(store),
+            "lastAtlasReportAt": _last_atlas_report_at(reports),
+            "publicEmptyStateReason": _public_empty_state_reason(tasks, human_tasks, public_reports),
             "deploymentSummary": _deployment_summary(store),
             "agents": _agents_snapshot(registry, tasks, approvals),
             "tasks": [_task_snapshot(task, audience=audience) for task in tasks],
@@ -207,6 +214,52 @@ def _scheduler_snapshot(store: Store) -> dict[str, Any]:
         "workdayWindow": "10:00-16:00 Europe/Paris",
         "summary": _safe(row["summary"], public=True),
     }
+
+
+def _storage_snapshot() -> dict[str, Any]:
+    try:
+        status = db_status()
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "storeBackendPublicStatus": "postgres_unavailable",
+            "summary": _safe(str(exc), public=True),
+        }
+    backend = status.get("backend")
+    public_status = status.get("publicStatus") or ("sqlite_preview" if backend == "sqlite" else "postgres_unavailable")
+    return {
+        "storeBackendPublicStatus": public_status,
+        "backend": backend,
+        "repositoryMode": status.get("repositoryMode"),
+        "connected": bool(status.get("connected")),
+        "schemaVersion": status.get("schemaVersion"),
+        "summary": _safe(str(status.get("safeSummary", "Store status loaded.")), public=True),
+    }
+
+
+def _scheduler_public_status(store: Store) -> str:
+    row = store.connection.execute("SELECT status FROM scheduler_runs ORDER BY started_at DESC LIMIT 1").fetchone()
+    if not row:
+        return "not_started"
+    return str(row["status"])
+
+
+def _last_scheduler_checkpoint(store: Store) -> str | None:
+    row = store.connection.execute("SELECT ended_at, started_at FROM scheduler_runs ORDER BY started_at DESC LIMIT 1").fetchone()
+    if not row:
+        return None
+    return row["ended_at"] or row["started_at"]
+
+
+def _last_atlas_report_at(reports: list[dict[str, str]]) -> str | None:
+    if not reports:
+        return None
+    return max(str(report["created_at"]) for report in reports if report.get("created_at"))
+
+
+def _public_empty_state_reason(tasks: list[Any], human_tasks: list[Any], public_reports: list[dict[str, str]]) -> str | None:
+    if tasks or human_tasks or public_reports:
+        return None
+    return "No persisted public runtime work, reports, or HumanTasks exist yet."
 
 
 def _deployment_summary(store: Store) -> dict[str, Any]:

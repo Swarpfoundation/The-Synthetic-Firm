@@ -105,6 +105,11 @@ export function snapshotToState(snapshot: ControlRoomSnapshot): Partial<TsfState
       deploymentSummary: snapshot.deploymentSummary
         ? `${snapshot.deploymentSummary.summary} Health: ${snapshot.deploymentSummary.backendHealthPublicStatus}.`
         : 'No public deployment activity yet.',
+      storeBackendPublicStatus: snapshot.storeBackendPublicStatus || snapshot.storage?.storeBackendPublicStatus || null,
+      storageSummary: snapshot.storage?.summary || null,
+      repositoryMode: snapshot.storage?.repositoryMode || null,
+      lastAtlasReportAt: snapshot.lastAtlasReportAt || null,
+      publicEmptyStateReason: snapshot.publicEmptyStateReason || null,
     },
   };
 }

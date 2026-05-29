@@ -53,6 +53,12 @@ from synthetic_firm.render_adapter import (
     render_readiness,
     render_status,
 )
+from synthetic_firm.render_runtime import (
+    public_api_smoke,
+    render_api_readiness,
+    scheduler_checkpoint_smoke,
+    scheduler_render_readiness,
+)
 from synthetic_firm.human_tasks import format_human_task_for_telegram, human_task_to_dict
 from synthetic_firm.execution_queue import (
     enqueue_action,
@@ -105,6 +111,7 @@ from synthetic_firm.scheduler import (
     scheduler_status,
 )
 from synthetic_firm.store import Store, init_store
+from synthetic_firm.store_backend import db_migrate, db_redaction_smoke, db_smoke, db_status, db_verify
 from synthetic_firm.task import create_task, task_to_dict
 from synthetic_firm.vercel_adapter import (
     create_vercel_deployment_plan,
@@ -228,6 +235,15 @@ ORCHESTRATOR_COMMANDS = frozenset(
         "deployment-human-tasks",
         "deployment-notifications",
         "public-progress-e2e-smoke",
+        "db-status",
+        "db-migrate",
+        "db-verify",
+        "db-smoke",
+        "db-redaction-smoke",
+        "scheduler-render-readiness",
+        "scheduler-checkpoint-smoke",
+        "render-api-readiness",
+        "public-api-smoke",
     }
 )
 
@@ -510,6 +526,23 @@ def build_orchestrator_parser() -> argparse.ArgumentParser:
     public_smoke = sub.add_parser("public-progress-e2e-smoke", help="Internal/dev: read-only public frontend/API smoke")
     public_smoke.add_argument("--frontend-url", required=True)
     public_smoke.add_argument("--api-url", required=True)
+    sub.add_parser("db-status", help="Internal/dev: show redacted store backend status")
+    db_migrate_parser = sub.add_parser("db-migrate", help="Internal/dev: dry-run or apply database migrations")
+    db_migrate_mode = db_migrate_parser.add_mutually_exclusive_group()
+    db_migrate_mode.add_argument("--dry-run", action="store_true", default=True)
+    db_migrate_mode.add_argument("--apply", action="store_true")
+    sub.add_parser("db-verify", help="Internal/dev: verify configured database schema readiness")
+    sub.add_parser("db-smoke", help="Internal/dev: run safe database smoke checks")
+    sub.add_parser("db-redaction-smoke", help="Internal/dev: verify database URL redaction")
+    sub.add_parser("scheduler-render-readiness", help="Internal/dev: check Render scheduler readiness")
+    scheduler_smoke = sub.add_parser("scheduler-checkpoint-smoke", help="Internal/dev: dry-run or apply one scheduler checkpoint smoke")
+    scheduler_smoke_mode = scheduler_smoke.add_mutually_exclusive_group()
+    scheduler_smoke_mode.add_argument("--dry-run", action="store_true", default=True)
+    scheduler_smoke_mode.add_argument("--apply", action="store_true")
+    render_api = sub.add_parser("render-api-readiness", help="Internal/dev: check Render public API readiness")
+    render_api.add_argument("--api-url")
+    public_api = sub.add_parser("public-api-smoke", help="Internal/dev: smoke-test public read-only API")
+    public_api.add_argument("--api-url", required=True)
     return parser
 
 
@@ -1306,6 +1339,40 @@ def _main_orchestrator(argv: list[str]) -> int:
         result = run_public_progress_e2e_smoke(frontend_url=args.frontend_url, api_url=args.api_url)
         _print_json(result.to_dict())
         return 0 if result.passed else 1
+    if args.command == "db-status":
+        _print_json(db_status())
+        return 0
+    if args.command == "db-migrate":
+        _print_json(db_migrate(apply=args.apply))
+        return 0
+    if args.command == "db-verify":
+        result = db_verify()
+        _print_json(result)
+        return 0 if result.get("verified", False) else 1
+    if args.command == "db-smoke":
+        result = db_smoke()
+        _print_json(result)
+        return 0 if result.get("smokePassed", False) else 1
+    if args.command == "db-redaction-smoke":
+        result = db_redaction_smoke()
+        _print_json(result)
+        return 0 if result.get("passed", False) else 1
+    if args.command == "scheduler-render-readiness":
+        result = scheduler_render_readiness()
+        _print_json(result)
+        return 0
+    if args.command == "scheduler-checkpoint-smoke":
+        result = scheduler_checkpoint_smoke(apply=args.apply)
+        _print_json(result)
+        return 0
+    if args.command == "render-api-readiness":
+        result = render_api_readiness(api_url=args.api_url)
+        _print_json(result)
+        return 0
+    if args.command == "public-api-smoke":
+        result = public_api_smoke(api_url=args.api_url)
+        _print_json(result)
+        return 0 if result.get("passed", False) else 1
     raise AssertionError(f"Unhandled command: {args.command}")
 
 

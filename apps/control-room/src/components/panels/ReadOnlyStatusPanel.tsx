@@ -44,6 +44,9 @@ export function ReadOnlyStatusPanel() {
               <span>last checkpoint: {metadata.lastCheckpointAt ? new Date(metadata.lastCheckpointAt).toLocaleTimeString() : 'none'}</span>
               <span>next checkpoint: {metadata.nextCheckpoint || 'next workday'}</span>
               <span>deployment: {metadata.deploymentState || 'not_started'}</span>
+              <span>storage: {metadata.storeBackendPublicStatus || 'sqlite_preview'}</span>
+              <span>repository: {metadata.repositoryMode || 'sqlite_active'}</span>
+              <span>Atlas report: {metadata.lastAtlasReportAt ? new Date(metadata.lastAtlasReportAt).toLocaleTimeString() : 'none'}</span>
               <span className="flex items-center gap-1">
                 <AuditIcon className="h-3 w-3" />
                 audit #{metadata.lastAuditSequence ?? 0}
@@ -60,6 +63,12 @@ export function ReadOnlyStatusPanel() {
             )}
             {metadata.deploymentSummary && (
               <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.deploymentSummary}</p>
+            )}
+            {metadata.storageSummary && (
+              <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.storageSummary}</p>
+            )}
+            {metadata.publicEmptyStateReason && (
+              <p className="mt-2 text-[9px] leading-relaxed text-[#94a3b8]">{metadata.publicEmptyStateReason}</p>
             )}
             {dataSourceError && <p className="mt-2 text-[9px] text-[#EF4444]">{dataSourceError}</p>}
           </div>

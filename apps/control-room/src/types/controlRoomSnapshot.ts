@@ -38,6 +38,19 @@ export interface ControlRoomSnapshot {
     workdayWindow: string;
     summary: string;
   };
+  storage?: {
+    storeBackendPublicStatus: 'sqlite_preview' | 'postgres_ready' | 'postgres_unavailable';
+    backend?: string;
+    repositoryMode?: string | null;
+    connected?: boolean;
+    schemaVersion?: number | null;
+    summary: string;
+  };
+  storeBackendPublicStatus?: 'sqlite_preview' | 'postgres_ready' | 'postgres_unavailable';
+  schedulerPublicStatus?: string;
+  lastSchedulerCheckpoint?: string | null;
+  lastAtlasReportAt?: string | null;
+  publicEmptyStateReason?: string | null;
   deploymentSummary?: {
     latestState: string;
     latestTarget: string | null;

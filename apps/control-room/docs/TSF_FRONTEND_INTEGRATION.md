@@ -174,6 +174,20 @@ only. The frontend must not trigger Vercel or Render deploys, mutate deployment
 configuration, edit environment variables, change domains, or expose service
 ids/tokens/logs.
 
+## Storage And Scheduler Status Mapping
+
+Snapshots may include `storage`, `storeBackendPublicStatus`,
+`schedulerPublicStatus`, `lastSchedulerCheckpoint`, `lastAtlasReportAt`, and
+`publicEmptyStateReason`. These fields are public-safe observability only. The UI
+may show whether the public backend is using local preview SQLite or a ready
+Postgres runtime, but it must not show database URLs, hostnames, usernames,
+passwords, service ids, raw database errors, or schema internals.
+
+Render-hosted operation should use a shared Postgres store for the API and
+scheduler checkpoint job. If the backend reports `sqlite_preview`, the frontend
+should treat it as a truthful preview/development state rather than durable
+production company state.
+
 ## Human Task Boundary
 
 Telegram is the founder's private Human Task Inbox. Agents may ask for real-world
@@ -209,5 +223,3 @@ The frontend must not:
 Add an authenticated founder-only command adapter. Keep public frontend actions
 disabled; any future founder action must route through signed, audited,
 approval-aware runtime boundaries.
-
-<!-- Git integration redeploy marker: 2026-05-28T22:27:22Z -->

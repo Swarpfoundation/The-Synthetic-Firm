@@ -46,6 +46,13 @@ def default_db_path() -> Path:
 
 
 class Store:
+    def __new__(cls, path: str | Path | None = None):
+        if cls is Store and path is None and os.environ.get("TSF_STORE_BACKEND", "sqlite").strip().lower() == "postgres":
+            from synthetic_firm.postgres_repositories import PostgresStore
+
+            return object.__new__(PostgresStore)
+        return super().__new__(cls)
+
     def __init__(self, path: str | Path | None = None):
         self.path = Path(path) if path else default_db_path()
         self.path.parent.mkdir(parents=True, exist_ok=True)

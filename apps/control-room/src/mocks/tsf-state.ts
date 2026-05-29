@@ -217,5 +217,10 @@ export const initialState: TsfState = {
     workdayWindow: null,
     deploymentState: null,
     deploymentSummary: null,
+    storeBackendPublicStatus: null,
+    storageSummary: null,
+    repositoryMode: null,
+    lastAtlasReportAt: null,
+    publicEmptyStateReason: null,
   },
 };
