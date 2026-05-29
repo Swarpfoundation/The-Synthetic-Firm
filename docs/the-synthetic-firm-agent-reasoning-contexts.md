@@ -10,8 +10,10 @@ metadata, and secrets are excluded.
   founder-message counts, budget usage, and report summaries.
 - Scout sees research task state and missing research capability. Scout may not
   invent leads or market findings.
-- Forge sees repo/runtime/frontend summaries and build blockers. Forge may not
-  claim code changes, PRs, or deployments without persisted evidence.
+- Forge sees repo/runtime/frontend summaries and build blockers. Forge may
+  propose repo edits, tests, commits, Vercel preview work, and Render runtime
+  changes for the coding agent, but may not claim code changes, pushes, PRs, or
+  deployments without persisted evidence.
 - Pulse sees only approved offer or CRM summaries when they exist. Pulse may not
   claim outreach was sent without audited sending capability.
 - Sentinel sees candidate claims and evidence summaries, then blocks unsupported

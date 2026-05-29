@@ -202,6 +202,7 @@ def test_agent_contexts_do_not_claim_unavailable_external_work(monkeypatch, tmp_
     pulse = build_agent_context(store, agent_id="pulse")
 
     assert "do not invent leads" in scout.lower()
+    assert "coding agent" in forge.lower()
     assert "do not claim code changes" in forge.lower()
     assert "do not claim outreach was sent" in pulse.lower()
     store.close()

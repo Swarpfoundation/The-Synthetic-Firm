@@ -47,9 +47,11 @@ Do not run the bounded local scheduler loop as a deployed daemon in this phase.
 ## Still Disabled
 
 The Synthetic Firm still does not implement live email sending, social posting,
-investor outreach sending, production deployment, GitHub write automation,
-Stripe/payment/domain purchasing, active worker creation, or autonomous
-self-upgrade execution.
+investor outreach sending, production deployment, Stripe/payment/domain
+purchasing, active worker creation, or unbounded autonomous self-upgrade
+execution. Repo changes are routed through the coding-agent/operator path:
+Forge may ask for code work, and the coding agent may edit, test, commit, and
+push with budget/deployment gates and audit evidence.
 
 ## Deployment Operations v0.1
 

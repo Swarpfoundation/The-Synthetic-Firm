@@ -28,7 +28,7 @@ AGENT_REASONING_FIELDS = frozenset(
 AGENT_PURPOSES = {
     "atlas": "Create or update daily management priorities from persisted state.",
     "scout": "Identify research work only from real configured sources or blockers.",
-    "forge": "Identify build work only from real repo/runtime state or blockers.",
+    "forge": "Identify repo/product work from real runtime state, create coding-agent implementation tasks, and track blockers.",
     "pulse": "Identify growth planning only from approved real data or blockers.",
     "sentinel": "Review truthfulness, privacy, security, budget, and unsupported claims.",
 }
@@ -36,7 +36,7 @@ FORBIDDEN_OUTPUTS = (
     "Do not claim revenue, customers, leads, investors, meetings, PRs, deployments, outreach, payments, accounts, or domains unless evidence_refs include persisted evidence.",
     "Do not request or expose secrets.",
     "Do not propose live external business actions as completed work.",
-    "Do not change permissions, budgets, policies, logging, or authority.",
+    "Do not change permissions, budgets, policies, logging, or authority without founder-visible review.",
 )
 ALLOWED_OUTPUTS = (
     "JSON only using the required schema.",
@@ -171,7 +171,10 @@ def _capability_note(agent_id: str) -> str:
     if agent_id == "scout":
         return "No external research adapter exists yet; do not invent leads or market findings."
     if agent_id == "forge":
-        return "No GitHub write/deploy adapter exists; do not claim code changes unless persisted evidence exists."
+        return (
+            "Forge may propose repo edits, tests, commits, Vercel preview work, and Render runtime changes for the coding agent. "
+            "Do not claim code changes, pushes, previews, or deployments are complete unless persisted evidence exists."
+        )
     if agent_id == "pulse":
         return "No email/social/CRM sending adapter exists; do not claim outreach was sent."
     if agent_id == "sentinel":

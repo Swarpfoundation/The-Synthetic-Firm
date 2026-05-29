@@ -54,7 +54,7 @@ scripts/check-brand-identity.sh
 
 ## Still intentionally unavailable
 
-The Synthetic Firm still does not perform live email sending, social posting, investor outreach, production deployment, GitHub write automation, payment processing, domain purchasing, active worker creation, or autonomous self-upgrade execution.
+The Synthetic Firm still does not perform live email sending, social posting, investor outreach, production deployment, payment processing, domain purchasing, active worker creation, or unbounded autonomous self-upgrade execution. Repo changes are handled through the coding-agent/operator path: Forge may create implementation HumanTasks, and the coding agent may edit, test, commit, and push with audit/deployment evidence.
 
 ## Recommended Phase 5
 

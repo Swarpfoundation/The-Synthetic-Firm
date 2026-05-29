@@ -44,8 +44,8 @@ Forbidden actions fail closed in Phase 3:
 - email sending
 - social posting
 - investor outreach
-- Vercel deployment
-- GitHub write or merge
+- unreviewed Vercel deployment
+- unaudited GitHub write or merge
 - Stripe/payment connection
 - domain purchasing
 - production deployment
@@ -55,7 +55,7 @@ Forbidden actions fail closed in Phase 3:
 - secret reads
 - audit log disablement
 
-Allowed safe simulated actions include internal notes, task creation, message creation, approval request creation, daily report generation, worker proposals, self-improvement proposals, budget checks, and status checks.
+Allowed safe actions include internal notes, task creation, message creation, approval request creation, daily report generation, worker proposals, self-improvement proposals, budget checks, status checks, deployment planning, and HumanTasks that ask the coding agent to perform audited repo work. Live pushes and deployments require the coding agent/operator path, budget gates, audit evidence, and deployment policy checks.
 
 ## Budget persistence
 

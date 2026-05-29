@@ -61,7 +61,7 @@ These commands use `TSF_HOME` and do not print secrets.
 
 ## Intentionally disabled
 
-Phase 3 does not add live email, social posting, investor outreach, Vercel deployment, GitHub write automation, Stripe, domain purchasing, production deployment, active worker creation, or autonomous self-upgrade execution.
+Phase 3 does not add live email, social posting, investor outreach, unreviewed Vercel deployment, Stripe, domain purchasing, production deployment, active worker creation, or unbounded autonomous self-upgrade execution. Repo edits, commits, pushes, Vercel preview changes, and Render changes may be handled by the coding-agent/operator path when Forge creates implementation work and the result is tested, audited, and budget-gated.
 
 ## Recommended Phase 4
 

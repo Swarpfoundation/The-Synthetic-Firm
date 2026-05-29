@@ -208,11 +208,16 @@ The Synthetic Firm does not currently implement:
 - investor outreach sending
 - production deployment
 - payment processing
-- autonomous repository write automation
+- unbounded autonomous repository write automation
 - autonomous merge to main
 - active worker creation
 - autonomous permission escalation
 - autonomous self-upgrade execution
+
+Forge may create implementation work for the coding-agent/operator path. The
+coding agent may edit this repo, run tests, commit, push, and prepare
+Vercel/Render changes when the work is founder-visible, budget-aware, and
+auditable. Production deployment remains separately blocked.
 
 ## Documentation
 
