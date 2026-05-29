@@ -104,6 +104,9 @@ def send_notifications(
             raise NotificationQueueError("Live notification send requires Telegram config and sender")
         if not config.enabled:
             raise TelegramLiveError("Telegram live send is disabled")
+        if notification.notification_type in {"approval_request", "approval_decision"}:
+            _mark(store, notification, "blocked")
+            continue
         chat_id = notification.chat_id or config.default_chat_id()
         sender(chat_id, notification.body)
         _mark(store, notification, "sent")

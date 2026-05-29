@@ -143,8 +143,6 @@ def handle_control_command(
     if runtime == "paused" and command.command not in {
         "status",
         "report",
-        "approvals",
-        "approval",
         "budget",
         "resume",
         "kill",

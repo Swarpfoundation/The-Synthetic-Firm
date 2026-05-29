@@ -69,6 +69,33 @@ def test_live_send_can_retry_dry_run_human_task_notification(monkeypatch, tmp_pa
     store.close()
 
 
+def test_live_send_blocks_approval_notifications(monkeypatch, tmp_path):
+    monkeypatch.setenv("TSF_HOME", str(tmp_path))
+    store = Store()
+    enqueue_notification(
+        store,
+        notification_type="approval_request",
+        body="Approve this action.",
+        chat_id="123",
+        dry_run=False,
+    )
+    calls: list[tuple[str, str]] = []
+    config = TelegramConfig(
+        enabled=True,
+        bot_token="sensitive-bot-token",
+        allowed_chat_ids=frozenset({"123"}),
+        mode="bounded_polling",
+    )
+
+    sent = send_notifications(store, dry_run=False, config=config, sender=lambda chat, body: calls.append((chat, body)))
+    row = store.connection.execute("SELECT status FROM notification_queue").fetchone()
+
+    assert sent == []
+    assert calls == []
+    assert row["status"] == "blocked"
+    store.close()
+
+
 def test_budget_warning_thresholds():
     assert "50%" in budget_warning(5.0, 10.0)
     assert "80%" in budget_warning(8.0, 10.0)

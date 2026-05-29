@@ -46,9 +46,10 @@ def test_telegram_approval_message_plain_english():
 
     message = format_outgoing_approval(approval)
 
-    assert "The Synthetic Firm approval request" in message
-    assert "/approve" in message
-    assert "/resume" in message
+    assert "The Synthetic Firm internal approval notice" in message
+    assert "/approve" not in message
+    assert "/resume" not in message
+    assert "Founder Telegram is not an approval surface." in message
 
 
 def test_daily_report_persists_and_avoids_secret(monkeypatch, tmp_path):

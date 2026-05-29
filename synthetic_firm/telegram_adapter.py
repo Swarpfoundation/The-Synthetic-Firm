@@ -56,7 +56,7 @@ SUPPORTED_COMMANDS = frozenset(
 
 
 def format_outgoing_approval(request: ApprovalRequest) -> str:
-    return format_telegram_approval(request).replace("/pause\n/budget", "/pause\n/resume\n/budget\n/report")
+    return format_telegram_approval(request)
 
 
 def parse_telegram_command(text: str) -> TelegramCommand:

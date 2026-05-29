@@ -70,7 +70,7 @@ def format_telegram_approval(request: ApprovalRequest) -> str:
     guardian = request.guardian_review or "Sentinel review not yet attached."
     return "\n".join(
         [
-            "The Synthetic Firm approval request",
+            "The Synthetic Firm internal approval notice",
             f"ID: {request.approval_id}",
             f"Task: {request.task_id}",
             f"Agent: {request.agent_id}",
@@ -80,11 +80,9 @@ def format_telegram_approval(request: ApprovalRequest) -> str:
             f"Request: {request.plain_english_request}",
             f"Sentinel: {guardian}",
             "",
-            f"/approve {request.approval_id}",
-            f"/deny {request.approval_id}",
-            "/status",
-            "/pause",
-            "/budget",
+            "Founder Telegram is not an approval surface.",
+            "Atlas and Sentinel decide internal approvals through the runtime policy gates.",
+            "Reply only with plain-language context if the firm asks for a HumanTask.",
         ]
     )
 
